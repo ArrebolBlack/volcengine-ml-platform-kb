@@ -1,0 +1,29 @@
+# 待填写示例：一个 worker；未运行云端任务。
+# 复制到项目中，填写全部 __NAME__；准备 /workspace/project/run.sh。
+# 运行位置、字段依据和提交方法见 INDEX.md 与 ../docs/custom-tasks.md。
+TaskName: "__TASK_NAME__"
+Description: "Project-owned single-worker smoke"
+ImageUrl: "__IMAGE_URL__"
+ResourceQueueName: "__QUEUE_NAME__"
+Framework: Custom
+Entrypoint: "bash /workspace/project/run.sh"
+TaskRoleSpecs:
+  - RoleName: worker
+    RoleReplicas: 1
+    Flavor: "__FLAVOR__"
+Storages:
+  - Type: Vepfs
+    VepfsId: "__VEPFS_ID__"
+    SubPath: "__VEPFS_SUBPATH__"
+    MountPath: /workspace/project
+    ReadOnly: false
+Envs: []
+AccessType: Private
+ActiveDeadlineSeconds: "10m"
+Preemptible: false
+EnableTensorBoard: false
+RetryOptions:
+  EnableRetry: false
+  MaxRetryTimes: 5
+  IntervalSeconds: 120
+  PolicySets: []

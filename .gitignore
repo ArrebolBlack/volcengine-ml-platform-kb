@@ -1,0 +1,17 @@
+local_private/
+.secrets/
+.env
+.env.*
+!.env.example
+.volc/
+.tosutilconfig
+AccessKey*
+*.pem
+*.key
+__pycache__/
+*.pyc
+*.zip
+*.exe
+*.pkg
+*.deb
+*.apk

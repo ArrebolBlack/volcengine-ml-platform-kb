@@ -1,0 +1,29 @@
+# 待填写示例：2 个 worker；GPU/节点数由 Flavor 决定，未验证跨节点通信。
+# 每个 worker 执行 run-distributed.sh，由该项目脚本调用 torchrun。
+# 复制到项目并填写全部 __NAME__；两节点都须能访问同一源码与输出路径。
+TaskName: "__TASK_NAME__"
+Description: "Project-owned two-worker DDP smoke"
+ImageUrl: "__IMAGE_URL__"
+ResourceQueueName: "__QUEUE_NAME__"
+Framework: PyTorchDDP
+Entrypoint: "bash /workspace/project/run-distributed.sh"
+TaskRoleSpecs:
+  - RoleName: worker
+    RoleReplicas: 2
+    Flavor: "__FLAVOR__"
+Storages:
+  - Type: Vepfs
+    VepfsId: "__VEPFS_ID__"
+    SubPath: "__VEPFS_SUBPATH__"
+    MountPath: /workspace/project
+    ReadOnly: false
+Envs: []
+AccessType: Private
+ActiveDeadlineSeconds: "10m"
+Preemptible: false
+EnableTensorBoard: false
+RetryOptions:
+  EnableRetry: false
+  MaxRetryTimes: 5
+  IntervalSeconds: 120
+  PolicySets: []
