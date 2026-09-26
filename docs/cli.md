@@ -1,7 +1,7 @@
 # volc 命令与配置
 
 以下命令形态于 2026-09-19 在 Linux `volc/1.2.55` 上核查。
-执行了版本、各子命令 `--help` 和 `ml_task template`；未执行任务提交、取消或配置导出。
+初次核查仅执行版本、各子命令 `--help` 和 `ml_task template`。后续项目短任务实际验证了 submit、cancel、get/list JSON 查询及正常退出；未验证通用示例本身或配置导出。项目任务与计算证据由所属实验保存。
 `volc` 是 veMLP 工具；不要用通用云 CLI `ve` 代替，也不要拼成 `vloc`。
 
 ## 安装与认证
@@ -52,7 +52,7 @@ Linux 配置位于 `~/.volc/config`、`~/.volc/credentials`，不要打印其内
 | 停止 | `volc ml_task cancel --id TASK_ID` | 停止精确任务；不是删除数据 |
 
 当前顶层帮助没有 `ml_task delete`。不要从 `DeleteJob` 等 OpenAPI 名称猜 CLI 命令。
-`get` 有 `--output/-o`，但本轮没有验证 `-o yaml` 能生成可提交格式；导出使用上表的 `export`。
+2026-09-19 Linux 1.2.55 实测：不带 `--output` 的 `get` 会进入交互界面，非交互 SSH 应使用 `get --id TASK_ID --output json`。`list --name` 实测匹配任务名称，传任务 ID 得到空列表时不能据此判定任务不存在；已知 ID 用 `get --id`。JSON 摘要不包含完整排队原因，必要时查官方 GetJob 的 Status.Message。 多个监控同时调用 GetJob 曾触发 `AccountFlowLimitExceeded`，属于账户API限流，不能解释为训练失败或无任务。应串行查询并间隔请求；本次约2秒间隔可读回，非平台承诺的固定QPS。`-o yaml` 尚未验证为可提交格式；导出使用上表的 `export`。
 
 ## 提交字段与覆盖
 
@@ -66,6 +66,7 @@ Linux 配置位于 `~/.volc/config`、`~/.volc/credentials`，不要打印其内
 - `--resource_queue_name` 优先于 `--resource_queue_id`；旧 `--resource_group_id` 已弃用。
 - `--set` 可以替换模板变量或覆盖配置项，其优先级低于相应专用 flags。
 - `--preemptible` 为提交参数；默认 false。
+- `--priority` 完整范围为1–9，按数值从高到低调度；提交者只能使用其中获准档位。2026-09-20在1.2.55实测：同一账户在不同队列对9可接受或以“user is not queue admin”明确拒绝，6可接受。项目按授权选择最高可用档位；明确拒绝且未创建任务后才降低，不因超时或排队重复提交。实际值从GetJob的`ResourceConfig.Priority`核对，不能读顶层Priority。
 
 日常先保持一份可审阅的完整项目 YAML，再用标准 submit 命令。需要批量覆盖时才使用
 `--set TaskName=...`；包含逗号、引号、Shell 变量或嵌套结构时先检查解析行为，

@@ -96,3 +96,13 @@ checkpoint 采用训练框架支持的完整保存/加载方式。单文件可�
 来源：[创建训练任务](https://www.volcengine.com/docs/6459/72350?lang=zh)、
 [平台训练示例](https://www.volcengine.com/docs/6459/80586?lang=zh)、
 [资源规格配置差异](https://www.volcengine.com/docs/6459/1449547)。
+
+## 配额余量与个人准入
+
+2026-09-19 实际任务核验：队列的 QuotaCapability 减 QuotaAllocated 仍有 GPU 余量时，GetJob.Status.Message 可能报告个人配额不足。因此余量不是立即可用的物理卡，也不是当前用户的准入保证。任务卡在 Queue 时先读取具体原因；不要仅凭队列总量反复提交。平台可能建议可抢占闲时任务借用出借资源，是否采用取决于项目预算、可中断性和保存策略；先确认原任务已取消，再以独立任务配置提交，避免重复占用。具体队列、任务 ID 和运算结果留在所属项目。
+
+从 Windows 生成 Linux shell 时显式写 LF；CRLF 会破坏 heredoc 终止符。实际观察到 `bash -n` 对未闭合 heredoc 输出 warning 但退出码仍为0，因此提交前还须检查 stderr 无 warning，并检查 shell 不含 CRLF，不能只看 exit0。
+
+单实例多卡请求还受节点资源是否连续可用影响：2026-09-19 实际八卡任务在队列总 GPU 配额仍有余量、规格标为 Valid 时进入 Queueing，GetJob.Status.Message 提示可能存在资源碎片。因此总余量不等于存在一台可调度的八卡实例；RoleReplicas 与每实例 Flavor 要一起核对，保留原任务 ID 观察，不因排队重复提交。该提示只说明平台报告的可能原因，不代表已独立验证物理节点布局。
+
+队列可见、支持 Job、规格标为 Valid 与拥有创建权限是不同条件。实际请求可能明确返回 `User is not authorized to perform: ml_platform:CreateCustomTask`：这表示账号对目标队列无提交权限，不是资源排队。保留错误和请求ID于所属实验，权限改变前不重复提交；转向已授权队列，不能由总余量推断权限。
