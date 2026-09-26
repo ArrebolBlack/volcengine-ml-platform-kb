@@ -118,16 +118,44 @@
 
 ## 个人 API 与 CLI
 
-以 [个人 API 原文](http://10.1.130.101/help/reference/personal-api.html)（页面更新 2026-09-17 21:17，
-契约 `2.0.0`）和当前 OpenAPI/capabilities 为准。以下是文档整理，**没有安装 CLI、获取 schema、
-创建 Token 或调用接口验收**。浏览器打开本站 `/pt/api/openapi.json` 被客户端阻止，无法读取 JSON。
+2026-09-26 重新读取[个人 API 原文](http://10.1.130.101/help/reference/personal-api.html)，并成功
+取得 [OpenAPI 2.0.1](http://10.1.130.101/pt/api/openapi.json)，核对全部 29 个路径、31 个操作
+（19 GET、11 POST、1 DELETE）。帮助尾部仍有 `2.0.0` 旧说明；API 版本不等于 CLI 包版本。
+没有安装 CLI、创建 Token 或验收带凭据调用；无凭据 capabilities 请求返回 401。
+
+### 自动化覆盖：官方 CLI、API 与系统 SSH
+
+以下是当前公开契约的覆盖情况，**全部资源操作仍未实测**。“未公开”仅指此次个人 API/CLI，
+不否定控制台或厂商内部另有接口，也不授权复用它们绕过个人 API 边界。
+
+| 工作 | 官方 `zenith` CLI | 个人 API / 其余路径 |
+|---|---|---|
+| 身份、额度、项目、规格、镜像目录、实例查询 | 已说明命令 | API 已公开；项目仅查询，镜像目录不等于资产管理 |
+| 创建开发机、提交训练 | 帮助要求使用 HTTP API/生成客户端 | API 已公开，创建会启动/调度计算 |
+| 实例启动、停止、重启、同型号改配 | 已有，支持回执与有限效果核对 | API 已公开；停止不等于释放 |
+| 任务状态、取消、取消未返回 ID 的创建 | 取消命令已说明；状态用 API | API 已公开；取消回执成功后仍查终态 |
+| 公钥管理、补注入、SSH 信息 | 已有 | API 已公开；不生成或提供私钥 |
+| 非交互机内命令、文件传输 | `ssh connect` 要求 TTY | 个人 API 不执行 shell/传文件；结构化端点 + 系统 SSH 可作为接入路径，待实测 |
+| 平台原生训练日志、事件、TensorBoard、产物下载 | 未公开对应命令 | 2.0.1 无对应端点；控制台日志或经已验证持久卷取回工作负载输出 |
+| 实例删除、重建、换镜像、任务记录删除 | 未公开对应命令 | 2.0.1 无对应端点；按角色和厂商能力用控制台 |
+| 已有资源手动挂载 | 明确不提供 | Token 明确禁止，包括管理员 Token；仅总管理员控制台 |
+| 镜像构建/登记/分享、模型、文件分享/迁移 | 未公开对应命令 | 2.0.1 无资产写端点；按[数据与资产](zenith-data.md)使用有权入口 |
+| Token 创建/换发/撤销 | login/logout 只管理本地接入 | Token 不能管理 Token；用户菜单完成平台凭据引导 |
+| 项目/成员/组织/配额、推理等管理写入 | 未公开对应命令 | 2.0.1 无对应端点；控制台与管理员流程 |
+
+Codex 可以在已授予的执行、网络及凭据权限内调用 CLI、HTTP 客户端和 OpenSSH；
+[Codex 官方非交互文档](https://learn.chatgpt.com/docs/non-interactive-mode)也支持以 `codex exec`
+从脚本运行任务。这只能证明客户端具备编排方式，不能补出 Zenith 缺失端点或扩大用户权限。
+当前可判断“有条件实现常规研究命令行工作流”，不能判断“全平台完全 CLI”或“已无人值守验收”。
 
 ### 接入条件与 Token
 
-当前已确认浏览器入口是 `http://10.1.130.101`；API/CLI 文档要求配置实际 **HTTPS origin**，
-此轮未确认其地址。CLI 安装文档只说平台 GitHub Release Assets，没有提供具体仓库/Release URL。
-因此自动化接入先向平台维护方取得受支持的 HTTPS origin 和发布包位置，不能猜 `https://10.1.130.101`、
-绕证书检查或把未确认的 HTTP origin 填入 CLI。浏览器 UI 可继续按现有会话使用。
+已确认浏览器入口和公开 schema 可经 `http://10.1.130.101` 读取；API/CLI 文档及 schema 的
+server 说明要求实际 **HTTPS origin（不带路径）**，目前地址未确认。公开 HTTP GET 成功不能证明
+Bearer 请求应经 HTTP 发送，也没有实测 CLI 是否强制拒绝 HTTP。
+CLI 帮助仅提平台 GitHub Release Assets，正文及链接未给具体仓库/Release URL。
+接入时先取得受支持 origin；使用官方 CLI 再取得可信发布包。不要猜 `https://10.1.130.101`、
+绕证书检查或从同名 npm 包猜安装来源。直接 HTTP 客户端不依赖 CLI 安装，控制台仍可按已有会话使用。
 
 右上用户菜单 → [API Token](http://10.1.130.101/api-tokens) → 创建 Token 表单：名称、权限、过期。
 本次实见默认只读、每人最多 10 枚、默认 90 天/最长 365 天；预选规格镜像、开发机、任务、操作结果、
@@ -159,21 +187,38 @@ Token 会话不能管理 Token。停用/删除使后续请求失败，已受理�
 | 开发机列表/详情 | `GET /ai/instances`、`GET /ai/instances/{vendor}/{vendorInstanceId}` |
 | 启动/停止/重启 | `POST /ai/instances/{vendor}/{vendorInstanceId}/start`、`/stop`、`/restart` |
 | 同型号改配 | `POST /instances/{vendor}/{vendorInstanceId}/resize`，传 `offering_id` |
-| 本人任务列表/详情 | `GET /ai/jobs`、`GET /ai/jobs/{vendor}/{jobId}` |
+| 任务列表/详情 | `GET /ai/jobs`、`GET /ai/jobs/{vendor}/{jobId}`；可见范围不同，见下 |
 | 取消任务 | `POST /ai/jobs/{vendor}/{jobId}/cancel` |
 | 取消未获任务ID的创建 | `POST /operations/{创建操作ID}/cancel-job` |
 | 回执/原键查回 | `GET /operations/{id}`、`GET /operations/by-key`（带原 `Idempotency-Key`） |
 | 授权挂载盘 | `GET /me/mount-disks` |
 | SSH端点/注入/状态 | `GET /instances/{vendor}/{vendorInstanceId}/ssh-access`、`POST /instances/{vendor}/{vendorInstanceId}/inject-ssh-keys`、`GET /instances/{vendor}/{vendorInstanceId}/ssh-injections` |
-| 公钥管理 | `/me/ssh-keys`及 `/{id}`；精确方法和字段查当前 schema 或使用 CLI 命令 |
+| 公钥管理 | `GET/POST /me/ssh-keys`、`GET/DELETE /me/ssh-keys/{id}` |
 
 开发机默认本人，`scope=projects`扩到项目可见元数据，不开放他人终端。
-个人 API 的 `GET /ai/jobs`只列本人提交任务；控制台项目管理范围不扩大这个接口的范围。
-任务列表支持 vendor/project_id/page/page_size，不返回日志、环境变量或完整云配置。
-`updated_at/last_seen_at` 为观测时间，不是厂商实时状态。
+个人 API 的 `GET /ai/jobs`只列本人提交任务，管理员 Token 也如此；详情则允许本人或当前管理的
+活跃项目任务。列表支持 vendor/project_id/page/page_size，默认50、最多100条，不返回日志、
+环境变量、挂载路径或完整云配置。不要用控制台项目可见范围推导列表范围。
+
+开发机列表只含纳管、未删除、非 stale 的观测记录；精确详情仍可返回 stale 记录。
+`last_seen_at` 是 Unix 毫秒观测时间，0/null 为未知；worker 断开可留下旧的非 stale 数据，
+因此 `stale=false` 也不等于近期在线。分页和 CLI 截断规则见下。
 
 查询常用 scope：资料/额度 `profile:read`、项目 `projects:read`、规格/镜像/准入 `catalog:read`、
-实例 `instances:read`、任务 `jobs:read`、回执 `operations:read`；写动作另需对应 scope。
+实例 `instances:read`、任务 `jobs:read`、回执 `operations:read`、授权盘 `storage:read`。
+capabilities 不另要求 scope，但仍需有效 Bearer。单个写请求的 scope 如下；CLI/完整工作流还需
+查询与回执 scope，不能将组合需求误当成单个 POST 的要求。
+
+| 单个请求 | 必需 scope |
+|---|---|
+| 实例创建/启动/停止/重启/改配 | 分别 `instances:create` / `instances:start` / `instances:stop` / `instances:restart` / `instances:resize` |
+| 训练创建/取消 | `jobs:create` / `jobs:cancel` |
+| 公钥登记/删除 | `ssh-keys:write` |
+| 公钥补注入 | `ssh:inject` |
+| SSH 端点 | `ssh:read` |
+| 公钥列表/详情、注入状态 | `ssh-keys:read` |
+
+认证声明为 `security: [{"PersonalToken": []}]`，仍要求 Bearer；精确 scope 另见各操作的 `x-required-scopes`。
 `/pt/api/jobs` 和单独挂载接口属于管理员控制台，不是个人 API，Token 会报 `endpoint_not_available_for_token`；
 开放接口缺 scope 报 `insufficient_scope`。
 
@@ -187,8 +232,12 @@ Token 会话不能管理 Token。停用/删除使后续请求失败，已受理�
 
 `name` 4–32 位小写字母/数字/中划线，字母开头、字母数字结尾。`project_id`可选且必须有权参与；
 省略 `image_id`使用该路由标准镜像。存储按本人、项目、资源区规则自动配置，不能提交原生存储 ID 或任意路径。
-初始挂载选项与受权平台盘 ID 是否支持须查当前 schema；这不授予已有机器的手动挂载权限。
 成功回执含 vendor/vendor_instance_id/instance_url；创建会启动计算资源。
+
+开发机创建及准入新增 `storage_mode: personal | without_personal`：前者约束支持个人存储的路由，
+后者明确接受无个人存储，允许其他兼容区。帮助要求天翼区 1–4 网页模式使用后者；这是条件要求，
+不是所有厂商全局必填。显式资源区、项目存储和镜像仍限制落点，不会跨区复制数据。
+**训练创建 schema 没有 `storage_mode`，不要照搬该字段。**
 
 训练需要 `jobs:create`、`jobs:read`、`operations:read` 和必要目录/项目权限。示意：
 
@@ -205,9 +254,17 @@ Token 会话不能管理 Token。停用/删除使后续请求失败，已受理�
 
 `name` 1–63 ASCII 字母数字/点/下划线/中划线，字母数字开头；entrypoint 1–8192 字符；project_id必填。
 `replicas` 1–256，默认1，总 GPU＝规格卡数×副本。可选 framework、envs字符串字典（最多64项、
-每值≤4096字符）、max_runtime_seconds、description。镜像从 JOB 目录取，省略使用标准训练镜像，
+每值≤4096字符，变量名匹配 `[A-Za-z_][A-Za-z0-9_]{0,127}`）、max_runtime_seconds（1–2147483647）、
+description（≤1000字符）。镜像从 JOB 目录取，省略使用标准训练镜像，
 image_vendor可约束其平台。代码与数据须预先在授权存储，接口不上传代码、不开放任意路径挂载。
 成功回执含 vendor/job_id/job_url。
+
+**初始挂载存在待核实的契约冲突。** 2.0.1 的两类创建 schema 均有 `mount_personal`、
+`mount_project`、`mount_public`、`mount_disk_ids`；盘 ID 是已授权的平台 25 位 ID，最多20个且唯一，
+不是厂商 Fileset ID。训练创建说明允许这些初始授权选择；开发机 POST 说明却同时写“禁止挂载开关/盘 ID”
+和“允许已授权开关/盘 ID”。实际接受行为未验证，开发机示例省略这些字段，按平台自动配置并验证挂载。
+这不授予创建后手动挂载权；盘授权解释见[数据与资产](zenith-data.md)。
+创建和准入 schema 均为 `additionalProperties: false`，不加入猜测的厂商字段。
 
 准入 `POST .../admission` 需要 catalog:read，示意：
 
@@ -218,21 +275,32 @@ image_vendor可约束其平台。代码与数据须预先在授权存储，接�
 返回 allowed/blocked/unknown、reason_code、retryable；**不锁卡、不创建文件**。
 镜像、挂载、SSH、卡时仍可能列在 unchecked，不能用预检通过替代挂载验收。
 `project_reservation_blocked` 表示其他项目保障影响准入，不能原样刷请求或未经任务授权自行转低优。
-当前文档 execution_class 只接受 standard/low_priority，normal 返回400；低优当时仅火山。
-文档 resource_zone仅列字符串1–6，但当前UI有区10；API区10参数未验证，不猜。
+`execution_class` 只接受 standard/low_priority，normal 返回400；低优要求火山。
+2.0.1 的开发机创建、训练创建和准入均接受 `resource_zone` 字符串 `1/2/3/4/5/6/10`：
+1–4 是天翼（ctyun）pool01–04，5 是火山（volcengine），6 是无问（lanqi），10 是百度百舸（baidu）。
+这已解决旧文“区 10 参数/厂商未知”，但不证明当前账号在该区有容量或创建成功。
 
-创建、取消、启停、重启、改配要求平台原生 `Idempotency-Key`。同一意图重试必须保留原键和原内容；
+创建、取消、启停、重启、改配要求平台原生 `Idempotency-Key`（8–200字符，缺失可返回428）。
+准入、公钥管理和注入没有这项头要求。同一意图重试必须保留原键和原内容；
 同键改内容409；响应丢失先按原键找回。UNKNOWN先核实，不换键重交。
-202只受理，约5秒查操作回执并遵循Retry-After，成功后再查机器/任务状态。
+首次创建202只受理，重放可200；训练创建502也可能带回执，应先读取核实，不能据此换键重试。
+约5秒查操作回执并遵循Retry-After，成功后再查机器/任务状态。
 回执成功不等于运行、SSH可连或训练产物成功。取消发送 `{}` 并使用独立的取消键，
 需jobs:cancel、operations:read、jobs:read；可取消本人任务或所管理项目任务，列表可见范围另按上文。
 未获任务ID时用创建操作ID取消，原创建状态不明仍须等待；取消保留记录、日志和存储。
 这里只解释平台现有契约，不要求项目新建另一套回执或调度系统。
 
+解析响应时区分：操作查询包在 `operation`，开发机详情包在 `instance`，训练详情包在 `job`；
+SSH 端点直接提供 `host/port/user` 等结构化字段。注入返回202的 `enqueued/status_url`，不是普通操作回执。
+只有发起用户可读自己的操作回执。除执行 `state`，还需查看资源登记的 `finalization_state`
+（PENDING/SUCCEEDED/RETRYING/NEEDS_RECONCILIATION）；需要核对身份时先核实原资源，不重交创建。
+改配不隐式停止/启动，也不跨区迁移。
+
 ### CLI 安装与最小只读启动
 
 预览 CLI 要求 **Node.js 24、macOS/Linux**，Windows 凭据/恢复存储不支持。
-从平台 GitHub Release 获取 `zenith-cli-<版本>.tgz`、安装说明和发布元数据；实际仓库未在帮助提供。
+从平台 GitHub Release 获取 `zenith-cli-<版本>.tgz` 及配套安装说明/发布元数据，按官方安装说明验证来源；
+实际仓库未在帮助提供。帮助里的 `0.1.0-dev.1` 只是安装示例，不能当成最新版本。
 普通 CI 预览产物只保留14天，旧 Release 不自动补包。包不含 Node/Agent Skills，版本独立于平台发版。
 先阅读随包安装说明并确认包来源，再按对应版本安装：
 
@@ -241,6 +309,7 @@ npm install --global --ignore-scripts ./zenith-cli-<实际版本>.tgz
 zenith --version
 zenith api operations --output json
 zenith profiles create work --origin https://<实际平台域名>
+zenith profiles use work
 zenith auth login
 zenith auth status --output json
 zenith capabilities
@@ -255,16 +324,18 @@ zenith api schema --remote
 ```
 
 此块有明确占位符，不是本机直接可执行安装命令。profile优先级：`--profile` > `ZENITH_PROFILE` >
-`profiles use NAME` 默认。`ZENITH_API_TOKEN` 优先本地凭据，不落文件；非交互认证使用
+`profiles use NAME` 默认；先确认没有遗留 `ZENITH_PROFILE` 覆盖本次默认，或每次显式传 `--profile work`。
+帮助没有保证 create 自动选中 profile，所以示例显式 use。`ZENITH_API_TOKEN` 优先本地凭据，不落文件；非交互认证使用
 `zenith auth login --token-stdin --no-input`，从已批准的私密来源经stdin输入，不能把Token写命令参数。
 POSIX本地凭据为私有明文文件（目录0700/文件0600）；logout只删当前profile本地凭据，不撤销平台Token、
 不清环境变量。`profiles list`不输出凭据；`api schema`离线，`--remote`取当前文档且不发送Token。
 
 开发机默认50条，page-size 1–100；`--all`最多100页/10000条，可用max-pages/max-items收紧。
 检查JSON pagination完整性/截断、stale和last_seen_at。镜像page-size 1–50，支持q/workload，
-无可靠总数/终止标记、无全量选项，不能把一页当完整目录。
+无可靠总数/终止标记、无全量选项，不能把一页当完整目录；多厂商短页/空页也不证明全部读完。
+镜像503是目录不可用，不是空目录；初页附加标准/Zenith 镜像可多于 page-size。
 
-当前 CLI **不含创建/删除实例和手动挂载命令**；创建走上述HTTP API或生成客户端。
+当前 CLI **不含创建/删除实例和手动挂载命令**；开发机及训练创建走上述HTTP API或生成客户端。
 帮助称已提供认证/profile、只读、实例启停重启改配、SSH、回执恢复、准入与取消，实际安装后以help为准。
 
 ### 生命周期、取消和恢复命令
@@ -313,6 +384,7 @@ list/get/injection-status需ssh-keys:read；import还需ssh-keys:write；
 info/connect需ssh:read。只能连接本人机器。
 
 公钥查重/响应丢失先从本人列表找回，重复API指纹409；登记不等于旧机注入。
+API 注册必填 `public_key`（≤16384字符），可选 `name`（≤100），最多10把；201表示登记成功，删除204仅移除平台记录。
 注入无生命周期intent记录，超时先查injection-status --wait，pending超时退出7，不能盲重注入。
 info的人类输出隐藏地址/命令，JSON有私密端点，不能贴公共日志。
 connect调用本地OpenSSH，StrictHostKeyChecking=ask，需独立可信来源核对主机身份；变更密钥拒绝。
@@ -320,6 +392,29 @@ connect调用本地OpenSSH，StrictHostKeyChecking=ask，需独立可信来源�
 本机agent/default密钥，平台不提供跳板私钥。auto按proxy_hops选择代理，否则已寻址中继直连。
 connect要求交互TTY，不支持JSON/no-input/非交互；timeout仅约束平台请求，不终止交互SSH。
 删Token或平台公钥不会结束旧会话/清机内authorized_keys，撤销访问需另清授权。
+
+### Codex 的非交互 SSH 路径（尚未实测）
+
+`zenith ssh connect` 的 TTY 限制不表示系统 SSH 不能用于 Codex。帮助明确建议脚本使用
+`zenith ssh info ... --output json`，也可直接取 `ssh-access` API，然后构造本地 OpenSSH 参数。
+前提是本人运行中开发机、公钥已注入、网络可达、配对私钥/agent 可用，并已通过独立可信渠道确认
+目标及跳板主机身份。Token 不能替代 SSH 私钥。
+
+例如直连端点完成上述引导后，在受支持的 shell 中可验证一个非交互命令：
+
+```bash
+ssh -o BatchMode=yes -o StrictHostKeyChecking=yes \
+  -i "$IDENTITY_FILE" -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" 'hostname'
+```
+
+变量来自核对后的结构化端点和本机密钥路径；示例不是已跑通的命令。存在 `proxy_hops` 时必须按
+实际跳板路由与本地授权配置连接，不能套用直连示例或假定目标私钥也可认证跳板。不要 `eval`
+平台返回的命令文本；不要为无人值守跳过主机身份校验。首次可信引导完成后，才验证系统 SSH/SFTP/SCP
+的上传、下载、远程运行和错误退出处理。
+
+共享持久目录可用于训练代码和输出交接，具体[日志与产物方案](zenith-compute.md)仍待验收。
+SSH 只能操作已授权机内环境，不能补齐平台实例删除、手动挂载、Token 或管理员功能；
+机内 shutdown 不能当作 Zenith 释放资源。首次实测范围见[入口页](zenith.md)。
 
 来源：[API Token](http://10.1.130.101/help/account/api-tokens.html)、
 [个人 API 与 AI 接入](http://10.1.130.101/help/reference/personal-api.html)。
