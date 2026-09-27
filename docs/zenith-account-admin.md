@@ -132,7 +132,7 @@ Webhook：名称、HTTPS URL、可选签名密钥和事件，不选事件表示�
 
 ### 自动化覆盖：官方 CLI、API 与系统 SSH
 
-以下是当前公开契约的覆盖情况，**全部资源操作仍未实测**。“未公开”仅指此次个人 API/CLI，
+以下是当前公开契约的覆盖情况，**通过 API/CLI 的资源操作仍未实测**；系统 SSH 的实测范围见下文。“未公开”仅指此次个人 API/CLI，
 不否定控制台或厂商内部另有接口，也不授权复用它们绕过个人 API 边界。
 
 | 工作 | 官方 `zenith` CLI | 个人 API / 其余路径 |
@@ -142,7 +142,7 @@ Webhook：名称、HTTPS URL、可选签名密钥和事件，不选事件表示�
 | 实例启动、停止、重启、同型号改配 | 已有，支持回执与有限效果核对 | API 已公开；停止不等于释放 |
 | 任务状态、取消、取消未返回 ID 的创建 | 取消命令已说明；状态用 API | API 已公开；取消回执成功后仍查终态 |
 | 公钥管理、补注入、SSH 信息 | 已有 | API 已公开；不生成或提供私钥 |
-| 非交互机内命令、文件传输 | `ssh connect` 要求 TTY | 个人 API 不执行 shell/传文件；结构化端点 + 系统 SSH 可作为接入路径，待实测 |
+| 非交互机内命令、文件传输 | `ssh connect` 要求 TTY | 个人 API 不执行 shell/传文件；控制台端点 + 系统 SSH 命令已实测，API 取端点和文件传输仍待验收 |
 | 平台原生训练日志、事件、TensorBoard、产物下载 | 未公开对应命令 | 2.0.1 无对应端点；控制台日志或经已验证持久卷取回工作负载输出 |
 | 实例删除、重建、换镜像、任务记录删除 | 未公开对应命令 | 2.0.1 无对应端点；按角色和厂商能力用控制台 |
 | 已有资源手动挂载 | 明确不提供 | Token 明确禁止，包括管理员 Token；仅总管理员控制台 |
@@ -400,24 +400,45 @@ connect调用本地OpenSSH，StrictHostKeyChecking=ask，需独立可信来源�
 connect要求交互TTY，不支持JSON/no-input/非交互；timeout仅约束平台请求，不终止交互SSH。
 删Token或平台公钥不会结束旧会话/清机内authorized_keys，撤销访问需另清授权。
 
-### Codex 的非交互 SSH 路径（尚未实测）
+### Codex 的非交互 SSH 路径
 
 `zenith ssh connect` 的 TTY 限制不表示系统 SSH 不能用于 Codex。帮助明确建议脚本使用
 `zenith ssh info ... --output json`，也可直接取 `ssh-access` API，然后构造本地 OpenSSH 参数。
+尚未接入 API/CLI 时，可从本人开发机详情的“连接详情”获取主机、端口、用户和端点类型。
+浏览器钉钉会话、API Token、SSH 密钥分别认证不同入口；已有机内 SSH 不依赖创建 Token。
 前提是本人运行中开发机、公钥已注入、网络可达、配对私钥/agent 可用，并已通过独立可信渠道确认
 目标及跳板主机身份。Token 不能替代 SSH 私钥。
 
 例如直连端点完成上述引导后，在受支持的 shell 中可验证一个非交互命令：
 
 ```bash
-ssh -o BatchMode=yes -o StrictHostKeyChecking=yes \
-  -i "$IDENTITY_FILE" -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" 'hostname'
+ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes -o ConnectTimeout=10 \
+  -i "$IDENTITY_FILE" -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" 'hostname && id'
 ```
 
-变量来自核对后的结构化端点和本机密钥路径；示例不是已跑通的命令。存在 `proxy_hops` 时必须按
+变量来自核对后的当前端点和本机密钥路径，示例不包含可直接使用的连接参数。存在 `proxy_hops` 时必须按
 实际跳板路由与本地授权配置连接，不能套用直连示例或假定目标私钥也可认证跳板。不要 `eval`
 平台返回的命令文本；不要为无人值守跳过主机身份校验。首次可信引导完成后，才验证系统 SSH/SFTP/SCP
 的上传、下载、远程运行和错误退出处理。
+
+2026-09-27 首次实测：Windows PowerShell + 系统 OpenSSH，复用用户已创建的区 10 公网直连开发机
+及本机密钥。先用 `ssh-keygen -lf <本机公钥文件>` 与平台已登记公钥指纹比对，再按上述参数运行
+`hostname && id`；无需交互、退出码 0，返回目标容器主机名及 `root`。严格主机校验通过，
+沿用本机已有信任记录，未重新执行首次主机信任建立；私钥仅由本机 OpenSSH 用于认证，未复制到页面、文档或工具输出。
+PowerShell 对应写法如下，所有占位参数从当前控制台与本机配置填写，不复用过期端点：
+
+```powershell
+$zenithKey = 'C:\Users\<USER>\.ssh\<KEY_NAME>'
+$zenithServer = '<CURRENT_SSH_HOST>'
+$zenithPort = '<CURRENT_SSH_PORT>'
+$zenithUser = '<CURRENT_SSH_USER>'
+ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes -o ConnectTimeout=10 -i $zenithKey -p $zenithPort "${zenithUser}@${zenithServer}" 'hostname && id'
+```
+
+随后执行 `nvidia-smi --query-gpu=name,memory.total --format=csv,noheader`，返回两张
+`NVIDIA RPBZZZ6`、每张 `97887 MiB`；控制台规格名为 PRO6000 × 2。只证明驱动可见设备，
+未证明 PyTorch/CUDA 运算、多卡通信或训练性能。实际挂载结果归[数据页](zenith-data.md)。
+尚未验收自动获取端点、SFTP/SCP 上传下载、远程失败退出处理和停止/启动后的连接恢复。
 
 共享持久目录可用于训练代码和输出交接，具体[日志与产物方案](zenith-compute.md)仍待验收。
 SSH 只能操作已授权机内环境，不能补齐平台实例删除、手动挂载、Token 或管理员功能；
