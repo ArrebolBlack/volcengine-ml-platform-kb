@@ -54,7 +54,18 @@
 标为“已登记绑定；挂载尚待验证”的存储暂不能用于新建挂载；登记不会改变已有机器的挂载。
 若文件先写到了根盘，修好挂载不会自动把这些文件搬入持久卷。
 
-2026-09-27，Agent 在用户已创建的区 10（百度百舸）开发机上通过 Windows OpenSSH 只读执行：
+## 区 10 百度 PFS：在开发机中使用
+
+2026-09-27 核查的 34 页 Zenith 帮助未包含百度 PFS / 区 10 专章；平台页面已有相关配置。
+百度百舸官方的[存储挂载与使用](https://cloud.baidu.com/doc/AIHC/s/dmojisum4)说明：资源池关联 PFS
+及挂载服务后，开发机把指定源目录映射到容器路径，用户进入该路径即可按普通文件方式读写。
+Zenith 用户优先使用平台已配置的挂载，不照搬百度原生控制台的购买、绑定或手工挂载流程。
+
+本次 Zenith 区 10 的 `/personal_fast_storage` 用于个人文件，`/public_fast_storage` 用于区内公共数据。
+日常 `cp`、Python 文件读写、训练数据加载与输出都使用这些容器内路径，无需为已挂载目录配置百度 AK/SK
+或调用 PFS 管理 API。PFS 文件目录与 TOS/BOS 对象桶分别使用，不能把目录当桶传给对象工具。
+
+2026-09-27，Agent 在用户已创建的区 10 开发机上通过 Windows OpenSSH 只读执行：
 
 ```bash
 findmnt --json -T /personal_fast_storage -o TARGET,SOURCE,FSTYPE,OPTIONS
@@ -65,6 +76,28 @@ df -hT /personal_fast_storage /public_fast_storage
 两个路径均为独立挂载点，类型 `gpfs`、选项 `rw,relatime`，来源的个人/公共子目录与页面配置对应；
 个人容量 100 GiB、公共容量 2 TiB。页面仍提示“配置尚未验证机内挂载”，说明这条提示不能替代机内检查。
 这只证明本次实例的挂载与容量口径；未写文件，未验证目录权限、停止/启动后保留或训练任务共享同卷。
+
+确认挂载后，可在个人目录按项目组织文件。以下为建议布局，**尚未执行**；`my-project` 替换为项目名：
+
+```bash
+mkdir -p /personal_fast_storage/projects/my-project/{code,data,outputs,envs}
+cd /personal_fast_storage/projects/my-project
+```
+
+代码、数据、checkpoint 和输出使用上述子目录；公共目录按已有共享约定使用，不当作个人独占空间。
+本地与 PFS 间可经已连接的开发机使用 SCP/SFTP（或双方具备 rsync 时经 SSH 传输）；这是文件传输，
+不需要在本地电脑安装 PFS 挂载客户端，传输本身仍待本账号验证。
+网页入口为“我的文件与存储 → 我的文件 → 个人科研文件 · 资源区10”；网页浏览要求可用承载机/存储服务，
+“暂无可用承载机”不代表卷内文件消失。
+
+百度另有[将 Conda 和 Pip 包持久化存储至 PFS](https://cloud.baidu.com/doc/AIHC/s/umjqs7rgi)说明。
+将其示例挂载点换成本机真实 PFS 路径；环境复用需相同挂载绝对路径、相同架构及兼容的系统依赖，
+并核对新镜像包含 Bash/glibc。仅把代码放入 PFS，不会自动把根盘里已有的 Conda/Pip 环境迁进去。
+本库尚未在区 10 安装或迁移环境，不将官方示例当作已完成配置。
+
+PFS 的用途包含持久化和多计算环境共享；换机或任务复用时仍须挂到**同一 PFS 源目录/Fileset**。
+同名路径、同资源区或同用户不足以替代源目录核对；本账号的停启保留与任务共享仍需实测。
+区 10 与火山区 5 的个人/公共路径不自动互通。
 
 来源：[存储](http://10.1.130.101/help/data/storage.html)、
 [换机与存储迁移](http://10.1.130.101/help/data/storage-migration.html)。
