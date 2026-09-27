@@ -31,6 +31,8 @@
 运维管理员的“用户/项目管理员预览”只改变显示，**不降低服务端权限**。
 上表描述控制台；个人 Token 还受后文开放端点、scope 和所有权限制，不继承控制台 admin 的全局能力。
 普通用户不能用原生命令绕开 Zenith 的纳管边界；`volc` 所需火山身份不等于 Zenith 个人 Token。
+这不禁止开发机使用已独立授权的 TOS 对象、已挂载 vePFS 或可拉取的镜像；
+资产访问方法见[数据页](zenith-data.md#复用已有火山数据与镜像)，不能将平台 API 缺口扩大为机内访问限制。
 
 来源：[权限](http://10.1.130.101/help/reference/permissions.html)、
 [组织](http://10.1.130.101/help/account/organization.html)。Token scope 以本页较新个人 API 契约为准。
@@ -270,6 +272,8 @@ image_vendor可约束其平台。代码与数据须预先在授权存储，接�
 `mount_project`、`mount_public`、`mount_disk_ids`；盘 ID 是已授权的平台 25 位 ID，最多20个且唯一，
 不是厂商 Fileset ID。训练创建说明允许这些初始授权选择；开发机 POST 说明却同时写“禁止挂载开关/盘 ID”
 和“允许已授权开关/盘 ID”。实际接受行为未验证，开发机示例省略这些字段，按平台自动配置并验证挂载。
+该最小示例没有请求原项目 Fileset；需要指定盘的任务须先核实授权及被接受的参数，或走控制台已授权盘选择，
+不能照抄省略字段的示例后假定数据已经挂入。
 这不授予创建后手动挂载权；盘授权解释见[数据与资产](zenith-data.md)。
 创建和准入 schema 均为 `additionalProperties: false`，不加入猜测的厂商字段。
 

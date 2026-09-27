@@ -21,7 +21,8 @@ Zenith 是 `10.1.130.101` 上的多云算力集成平台，接入火山 MLP、�
 个人 HTTP API 可补齐开发机和训练创建；系统 SSH 可用于本人开发机内的命令、代码和文件。
 这条组合路径具备常规研究自动化的接口基础，但尚未完成本库的端到端实测。
 实例删除、平台原生训练日志、资产管理等仍缺已公开的个人 API；完整覆盖表、接入前提和
-非交互 SSH 方法见[账户与 API](zenith-account-admin.md)。不要套用原生 `volc` 命令或 AK/SK。
+非交互 SSH 方法见[账户与 API](zenith-account-admin.md)。Zenith 资源管理不能套用原生 `volc` 命令或 AK/SK；
+机内访问已独立授权的 TOS、vePFS 和镜像另按[现有火山资产复用路径](zenith-data.md#复用已有火山数据与镜像)执行。
 
 Agent 接入平台 API 时，依次确认：实际受支持的 HTTPS origin 和 Token → 查询本人身份、
 项目、额度、规格/镜像及当前 schema → 按任务选择 API 或官方 CLI → 在已授权的本人资源上验证
