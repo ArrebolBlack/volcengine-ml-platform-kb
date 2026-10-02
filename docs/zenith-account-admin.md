@@ -21,7 +21,7 @@
 | 动作 | 帮助所述控制台权限边界 |
 |---|---|
 | 创建开发机 | operator；可不选项目；选项目须有效成员关系 |
-| 创建训练任务 | 非 admin 当前须参与有效项目，且有计算操作权限 |
+| 创建训练任务 | operator + 计算操作权限；当前控制台允许个人任务，选项目时须有写入成员关系；学生账号的标准/低优资格另按制度检查 |
 | 启停/重启自己的开发机 | operator + 所有者；项目负责人/管理员同时为 operator 可代管项目实例的这三项 |
 | 删除/重建/变配/终端/补公钥 | operator + 实例所有者，或 admin；项目管理权不替代所有权 |
 | 训练控制/停止 | operator + 创建者、项目负责人/管理员或 admin |
@@ -78,7 +78,9 @@
 ## 学生制度：目标与已开放功能分开
 
 [学生卡时与整节点预留](http://10.1.130.101/help/projects/student-resource-policy.html)
-注明 2026-09-17 制度确认、**尚未全部上线**。以下是目标规则，不能据此声称已获容量或调用尚无入口的操作：
+注明 2026-09-17 制度确认；10 月 2 日页面称三档额度、低优训练、成员划拨、虚拟卡时入账和整节点
+预约已提供实现，但仍需部署对应版本、启用学生制度并登记可用预留池。以下是当前制度口径，不能据此
+声称本账号已启用或已获容量：
 
 | 项目 | 已确认目标 |
 |---|---|
@@ -86,7 +88,7 @@
 | 升降档 | 加入后下次查询提高本周总额、保留已用/已划；退出/结项本周已获额保留，下周降档 |
 | 周边界 | 北京时间周一 00:00，免费未用额度不结转 |
 | 开发机 | 单台 1/2 卡，每人同时运行最多 2 台且合计 2 卡；此条不规定停机数量上限，其他配额另行检查 |
-| 训练 | 不设个人卡数/并发硬上限，仍受额度/权限/容量；无项目只能个人低优，正式成员可普通/低优 |
+| 训练 | 不设开发机 2 卡限制；无项目只能低优，正式成员可普通/低优；个人 API 页面仍称低优目前仅支持火山，实际以 capabilities 为准 |
 | 预留对象 | 完整物理 8 卡训练节点；开发机和 1/2 卡碎片不可占用；借用也按整节点 |
 | 预付 | 节点数×8×小时；1 节点 24h＝192、84h＝672；空闲也付，已付范围项目训练不重复扣运行卡时 |
 | 低优借用 | 空闲预留可借，按提交者个人实际运行付费；不扣出借项目、不退预付 |
@@ -95,8 +97,8 @@
 | 跨周 | 本周免费额只保到周日24:00；购买额须有效覆盖，未获下周额度只是预约意向 |
 
 例如周日 22:00 至周一 02:00 的一节点预留共 32 卡时，前后周各 16；后半段另需新周有效资金与容量。
-购买价格、审批/有效期、预留期限/提前量、取消退款、故障保障、到期未完成和运行中余额耗尽处理
-尚待公布，不补猜测。管理员页仍说明的可配置“两档 168/672、卡数 1→4”机制与此目标不同，实际执行看账号有效策略。
+标准训练的新计量在余额耗尽后可进入最多 3 小时个人宽限；预付预约到期后的欠款由项目承担，低优不产生这类欠款。
+具体启用状态、资金来源和资源池仍以当前策略、页面确认和实际预留结果为准，不补猜测价格或容量。
 
 ## 项目协作与成员目录
 
@@ -127,9 +129,10 @@ Webhook：名称、HTTPS URL、可选签名密钥和事件，不选事件表示�
 
 ## 个人 API 与 CLI
 
-2026-09-27 全文重读[个人 API 原文](http://10.1.130.101/help/reference/personal-api.html)，当时取得的
-[OpenAPI 2.0.1](http://10.1.130.101/pt/api/openapi.json) 为 29 个路径、31 个操作（19 GET、11 POST、1 DELETE）。
-这份旧基线已过时：2026-10-03 匿名读取同一路径得到 OpenAPI 3.1.1、`info.version=2.19.0`、57 个
+2026-09-27 全文重读[个人 API 原文](http://10.1.130.101/help/reference/personal-api.html)，当时快照中的
+OpenAPI 版本为 2.0.1，共 29 个路径、31 个操作（19 GET、11 POST、1 DELETE）。
+这份旧基线已过时：2026-10-03 匿名读取[当前 OpenAPI](http://10.1.130.101/pt/api/openapi.json)
+得到 OpenAPI 3.1.1、`info.version=2.19.0`、57 个
 paths，比旧基线新增 28 个路径，主要覆盖共享数据集、对象源/预签名/STS、实例 Platform-ID 与挂载
 别名、任务 Platform-ID/日志/副本诊断。现有路径的 schema 也可能改变，不能只按路径数量增量实现。
 个人 API 帮助页页脚为 2026-10-02 01:15；帮助正文仍把基础契约标成 2.11.0，并在扩展段落使用
@@ -207,9 +210,9 @@ Token 会话不能管理 Token。停用/删除使后续请求失败，已受理�
 | 回执/原键查回 | `GET /operations/{id}`、`GET /operations/by-key`（带原 `Idempotency-Key`） |
 | 授权挂载盘 | `GET /me/mount-disks` |
 | 共享数据集 | `GET /ai/datasets`、`/{id}`、`/{id}/files`、`/{id}/file`；文件维护另有 `POST /file`、`/mkdir`、`/rename`、`/delete` |
-| 对象源和对象访问 | `GET /ai/files/sources`、`/objects`；预签名上传/下载和 `POST /ai/files/bucket-sts` |
-| 实例扩展 | Platform-ID 详情/启停/重启/改配/SSH/注入，以及 vendor/provider `GET .../mounts` |
-| 任务扩展 | Platform-ID 详情/取消/日志/副本诊断，以及 vendor 任务日志/副本诊断 |
+| 对象源和对象访问 | `GET /ai/files/sources`、`/objects`；`POST /ai/files/presign`、`/download-presign`、`/bucket-sts` |
+| 实例扩展 | `GET /ai/instances/{instanceId}`、`POST /ai/instances/{instanceId}/{start,stop,restart}`、`POST /instances/{instanceId}/resize`、`GET /instances/{instanceId}/ssh-access`、`POST /instances/{instanceId}/inject-ssh-keys`、`GET /instances/{instanceId}/ssh-injections`、`GET /ai/instances/{instanceId}/mounts` |
+| 任务扩展 | `GET /ai/jobs/by-id/{platformJobId}`、`POST /ai/jobs/by-id/{platformJobId}/cancel`、`GET /ai/jobs/by-id/{platformJobId}/{logs,replicas}`，以及 vendor 任务 `/logs`、`/replicas` |
 | SSH端点/注入/状态 | `GET /instances/{vendor}/{vendorInstanceId}/ssh-access`、`POST /instances/{vendor}/{vendorInstanceId}/inject-ssh-keys`、`GET /instances/{vendor}/{vendorInstanceId}/ssh-injections` |
 | 公钥管理 | `GET/POST /me/ssh-keys`、`GET/DELETE /me/ssh-keys/{id}` |
 
@@ -237,7 +240,8 @@ STS 凭据文件必须为 0600；不得将内容输出到日志或对话。具�
 因此 `stale=false` 也不等于近期在线。分页和 CLI 截断规则见下。
 
 查询常用 scope：资料/额度 `profile:read`、项目 `projects:read`、规格/镜像/准入 `catalog:read`、
-实例 `instances:read`、任务 `jobs:read`、回执 `operations:read`、授权盘 `storage:read`。
+实例 `instances:read`、任务 `jobs:read`、回执 `operations:read`、授权盘/对象源 `storage:read`、
+对象写入 `storage:write`、STS `storage:sts`、共享数据集读取/维护 `datasets:read`/`datasets:write`。
 capabilities 不另要求 scope，但仍需有效 Bearer。单个写请求的 scope 如下；CLI/完整工作流还需
 查询与回执 scope，不能将组合需求误当成单个 POST 的要求。
 
@@ -249,6 +253,8 @@ capabilities 不另要求 scope，但仍需有效 Bearer。单个写请求的 sc
 | 公钥补注入 | `ssh:inject` |
 | SSH 端点 | `ssh:read` |
 | 公钥列表/详情、注入状态 | `ssh-keys:read` |
+| 共享数据集目录/文件读写 | `datasets:read` / `datasets:write`（写入还需维护者或管理员身份） |
+| 对象预签名上传/下载、STS | `storage:write` / `storage:read`；STS 还需 `storage:sts` 和整桶读写绑定 |
 
 认证声明为 `security: [{"PersonalToken": []}]`，仍要求 Bearer；精确 scope 另见各操作的 `x-required-scopes`。
 `/pt/api/jobs` 和单独挂载接口属于管理员控制台，不是个人 API，Token 会报 `endpoint_not_available_for_token`；
@@ -262,13 +268,17 @@ capabilities 不另要求 scope，但仍需有效 Bearer。单个写请求的 sc
 {"name":"ai-dev-01","vendor":"volcengine","execution_class":"standard"}
 ```
 
-`name` 4–32 位小写字母/数字/中划线，字母开头、字母数字结尾。`project_id`可选且必须有权参与；
-省略 `image_id`使用该路由标准镜像。存储按本人、项目、资源区规则自动配置，不能提交原生存储 ID 或任意路径。
+`name` 为 1–128 个 Unicode code points；禁止前导 Unicode 空白、控制字符和非法代理字符，不能沿用旧版
+“小写字母/数字/中划线”校验。`project_id` 可选且必须有权参与；`funding_mode` 为 `personal|project`
+（默认 `personal`），选择 `project` 时额度不足会拒绝或停止，不回退个人额度。省略 `image_id` 使用路由默认
+镜像；提供时必须是目标资源区已登记且启用的镜像。存储按本人、项目、资源区规则自动配置，不能提交原生存储 ID 或任意路径。
 成功回执含 vendor/vendor_instance_id/instance_url；创建会启动计算资源。
 
-开发机创建及准入新增 `storage_mode: personal | without_personal`：前者约束支持个人存储的路由，
-后者明确接受无个人存储，允许其他兼容区。帮助要求天翼区 1–4 网页模式使用后者；这是条件要求，
-不是所有厂商全局必填。显式资源区、项目存储和镜像仍限制落点，不会跨区复制数据。
+开发机创建及准入支持 `storage_mode: personal | without_personal | without_personal_project`：
+`personal` 保留个人存储；`without_personal` 只关闭个人存储，仍受项目存储所在资源区约束；
+`without_personal_project` 同时关闭个人和项目存储，但保留权限范围内的公共存储。后两者不能与
+个人/项目挂载开关或 `mount_disk_ids` 冲突；天翼网页模式要求显式选择其中之一。显式资源区、镜像和
+项目计算配额仍限制落点，不会跨区复制数据。
 **训练创建 schema 没有 `storage_mode`，不要照搬该字段。**
 
 训练需要 `jobs:create`、`jobs:read`、`operations:read` 和必要目录/项目权限。示意：
@@ -276,7 +286,6 @@ capabilities 不另要求 scope，但仍需有效 Bearer。单个写请求的 sc
 ```json
 {
   "name": "ai-train-01",
-  "project_id": "<实际项目ID>",
   "entrypoint": "cd '<实际已挂载训练目录>' && python train.py",
   "image_vendor": "volcengine",
   "execution_class": "standard",
@@ -284,20 +293,19 @@ capabilities 不另要求 scope，但仍需有效 Bearer。单个写请求的 sc
 }
 ```
 
-`name` 1–63 ASCII 字母数字/点/下划线/中划线，字母数字开头；entrypoint 1–8192 字符；project_id必填。
+`name` 与开发机相同，为 1–128 个 Unicode code points，并禁止前导 Unicode 空白、控制字符和非法代理字符；
+entrypoint 1–8192 字符；`project_id` 可选，省略即个人任务，选择项目需有写入权限。学生低优即使带项目也
+从提交者个人额度扣费。`booking_id` 可选，仅能绑定有效的整节点预留、标准执行和匹配的 8-GPU offering。
 `replicas` 1–256，默认1，总 GPU＝规格卡数×副本。可选 framework、envs字符串字典（最多64项、
 每值≤4096字符，变量名匹配 `[A-Za-z_][A-Za-z0-9_]{0,127}`）、max_runtime_seconds（1–2147483647）、
-description（≤1000字符）。镜像从 JOB 目录取，省略使用标准训练镜像，
-image_vendor可约束其平台。代码与数据须预先在授权存储，接口不上传代码、不开放任意路径挂载。
+description（≤1000字符）。`image_id` 可选；提供时必须来自目标资源区 `workload=JOB` 的已登记启用镜像，
+省略由路由选择默认镜像；`image_vendor` 可约束其平台。代码与数据须预先在授权存储，接口不上传代码、不开放任意路径挂载。
 成功回执含 vendor/job_id/job_url。
 
-**初始挂载存在待核实的契约冲突。** 旧 2.0.1 基线的两类创建 schema 均有 `mount_personal`、
-`mount_project`、`mount_public`、`mount_disk_ids`；盘 ID 是已授权的平台 25 位 ID，最多20个且唯一，
-不是厂商 Fileset ID。训练创建说明允许这些初始授权选择；开发机 POST 说明却同时写“禁止挂载开关/盘 ID”
-和“允许已授权开关/盘 ID”。实际接受行为未验证，开发机示例省略这些字段，按平台自动配置并验证挂载。
-该最小示例没有请求原项目 Fileset；需要指定盘的任务须先核实授权及被接受的参数，或走控制台已授权盘选择，
-不能照抄省略字段的示例后假定数据已经挂入。
-这不授予创建后手动挂载权；盘授权解释见[数据与资产](zenith-data.md)。
+当前 2.19.0 schema 明确支持两类创建的 `mount_personal`、`mount_project`、`mount_public` 和
+`mount_disk_ids`。盘 ID 是已发布且当前账号有权使用的数据集 ID（25 位小写字母/数字），只允许同一
+`resource_zone` 只读挂载；其他原生 Fileset/任意盘仍须管理员控制台。显式挂载字段与
+`storage_mode` 的冲突由 schema 拒绝，不能以省略字段推断实际挂载；创建后手动调整仍不授予个人 Token。
 创建和准入 schema 均为 `additionalProperties: false`，不加入猜测的厂商字段。
 
 准入 `POST .../admission` 需要 catalog:read，示意：
@@ -309,10 +317,11 @@ image_vendor可约束其平台。代码与数据须预先在授权存储，接�
 返回 allowed/blocked/unknown、reason_code、retryable；**不锁卡、不创建文件**。
 镜像、挂载、SSH、卡时仍可能列在 unchecked，不能用预检通过替代挂载验收。
 `project_reservation_blocked` 表示其他项目保障影响准入，不能原样刷请求或未经任务授权自行转低优。
-`execution_class` 只接受 standard/low_priority，normal 返回400；低优要求火山。
-当前帮助仍声明开发机创建、训练创建和准入接受 `resource_zone` 字符串 `1/2/3/4/5/6/10`：
-1–4 是天翼（ctyun）pool01–04，5 是火山（volcengine），6 是无问（lanqi），10 是百度百舸（baidu）。
-这已解决旧文“区 10 参数/厂商未知”，但不证明当前账号在该区有容量或创建成功。
+`execution_class` 只接受 `standard|low_priority`，`normal` 返回 400；是否可用由实时
+`capabilities_by_resource_zone`、offering 路由和准入结果决定，不能将“火山低优”当成全局硬规则。
+当前 schema 接受 `resource_zone` 字符串 `1/2/3/4/5/6/10`。帮助和历史控制台把它们映射为
+1–4 天翼、5 火山、6 无问、10 百度，但 OpenAPI 的资源区目录本身不含厂商字段，也不保证路由、容量
+或权限；执行时只能使用 `capabilities.resource_zones`、具体 offering 的按区能力和准入响应。
 
 创建、取消、启停、重启、改配要求平台原生 `Idempotency-Key`（8–200字符，缺失可返回428）。
 准入、公钥管理和注入没有这项头要求。同一意图重试必须保留原键和原内容；
@@ -473,7 +482,8 @@ SSH 只能操作已授权机内环境，不能补齐平台实例删除、手动�
 机内 shutdown 不能当作 Zenith 释放资源。首次实测范围见[入口页](zenith.md)。
 
 来源：[API Token](http://10.1.130.101/help/account/api-tokens.html)、
-[个人 API 与 AI 接入](http://10.1.130.101/help/reference/personal-api.html)。
+[个人 API 与 AI 接入](http://10.1.130.101/help/reference/personal-api.html)、
+[CLI 与 Agent Skills 工作流](http://10.1.130.101/help/guide/cli-workflows.html)，页脚 2026-10-01 05:45。
 
 ## 通知、反馈与个人资料
 

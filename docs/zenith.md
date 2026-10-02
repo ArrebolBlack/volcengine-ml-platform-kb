@@ -1,6 +1,8 @@
 # Zenith 平台入口与 Agent 快速开始
 
-Zenith 是 `10.1.130.101` 上的多云算力集成平台，接入火山 MLP、天翼 BC、无问、百度百舸等资源。
+Zenith 是 `10.1.130.101` 上的多云算力集成平台。当前帮助简介列出火山 MLP、天翼 BC、无问和
+阿里云；实例、厂商和个人 API 页面同时保留资源区 10 的百度百舸能力说明。厂商目录存在这项
+文档差异，执行时以实时 `capabilities` 和页面实际选项为准。
 它有自己的账号、资源所有权、配额、目录和个人 API；本库原有 `volc`/veMLP 文档不能直接替代它。
 从 Zenith 创建的资源按 Zenith 工作流操作；公网火山控制台或 `volc` 创建的旧资源不自动归入“我的”。
 
@@ -11,6 +13,7 @@ Zenith 是 `10.1.130.101` 上的多云算力集成平台，接入火山 MLP、�
 - [计算与连接](zenith-compute.md)：开发机、SSH、训练、DDP、回收、推理。
 - [数据与资产](zenith-data.md)：镜像、模型、持久存储、文件与迁移。
 - [账户、API 与管理](zenith-account-admin.md)：权限、项目、卡时、Token/CLI、管理员功能。
+- 本页“证据范围与仍缺的操作经验”段落记录 2026-10-03 的帮助中心逐页更新时间、新增/失效路由和版本冲突。
 
 其他 Agent 从 [平台文档索引](INDEX.md)进入，只读本次需要的主题；本机 checkout 位置由接入项目
 资源文档记录。实际实验镜像、配置、任务 ID、结果归使用方项目，不复制到本库。
@@ -28,7 +31,7 @@ Zenith 是 `10.1.130.101` 上的多云算力集成平台，接入火山 MLP、�
 Agent 接入平台 API 时，依次确认：实际受支持的 HTTPS origin 和 Token → 查询本人身份、
 项目、额度、规格/镜像及当前 schema → 按任务选择 API 或官方 CLI → 在已授权的本人资源上验证
 SSH、挂载和输出。官方 CLI 另需可信 Release 包和受支持的运行环境；HTTP API 不依赖安装 CLI。
-当前 Windows 宿主能找到 Node.js 24 和 OpenSSH，但找不到 `zenith` 命令，尚未验证任何带凭据 API 请求。
+2026-10-03 本机检查仍能找到 Node.js 24 和 OpenSSH，但找不到 `zenith` 命令，尚未验证任何带凭据 API 请求。
 已有开发机可先从登录后的控制台取得端点，复用已注入的公钥和本机私钥走系统 SSH，
 不必等待 API Token 或官方 CLI；2026-09-27 已完成这一条[非交互连接路径](zenith-account-admin.md#codex-的非交互-ssh-路径)。
 
@@ -43,7 +46,9 @@ SHA-256 文件，Skills 安装到项目 `.agents/skills/zenith` 或个人 `~/.ag
 
 1. 在能够打开上述内网地址的浏览器中访问控制台，核对右上角账号和身份。2026-09-27 用户确认使用
    钉钉扫码，Agent 已复用 Chrome 登录会话；扫码由用户完成。Chrome 与 Codex 内置浏览器会话独立，
-   内置页停在登录页不能据此要求已登录的用户重新扫码。具体 VPN 或校外接入方案仍未确认。
+   内置页停在登录页不能据此要求已登录的用户重新扫码。当前登录会话只保存在站点 Cookie，平台帮助
+   声称不会将密码、Token 或私钥写入 local/session storage；退出应使用用户菜单，关闭标签页不等于服务端退出。
+   具体 VPN 或校外接入方案仍未确认。
 2. 打开“组织与项目”，确认组织分配的规格和存储开关、有效项目关系；打开“我的总览”看当前
    周期、剩余额度和资源区创建能力。组织和项目是独立关系，组织成员不自动获得项目目录。
 3. 在“SSH 密钥”登记自己设备的公钥；已有密钥先核对，不重复生成或扩大访问。具体步骤见计算页。
@@ -55,8 +60,8 @@ SHA-256 文件，Skills 安装到项目 `.agents/skills/zenith` 或个人 `~/.ag
    每 Worker 卡数、Worker 数及有效项目；核对总 GPU、挂载和 checkpoint。分布式模板见计算页。
 7. 观察状态与真实日志，完成后验证输出可读取，再按任务授权停止/释放。网页成功提示只证明请求接受。
 
-在已授权的 Linux 开发机上可做以下最小环境检查；9 月 27 日已通过 SSH 执行主机身份、GPU 可见性
-和挂载检查，`pwd`、以下 PyTorch 检查及文件读写仍待执行：
+在已授权的 Linux 开发机上可做以下最小环境检查；9 月 27 日已通过 SSH 执行主机身份、GPU 可见性、
+有界 PFS/HDF5 读写和挂载检查。下面的通用 `pwd`、PyTorch/CUDA 检查块尚未整体重跑：
 
 ```bash
 hostname
@@ -104,13 +109,13 @@ python -c 'import torch; x=torch.arange(1024, device="cuda"); print((x*x).sum().
 9 月 26 日无凭据 capabilities 返回 401 `unauthorized`，只证明服务可达。
 
 2026-10-03 又按线上帮助首页、导航和页面正文复核。10 月 2 日发布的帮助 HTML
-`Last-Modified` 为 `2026-10-02 15:53:45 GMT`（Zenith 镜像壳页为 15:53:33）；当前
+`Last-Modified` 为 `2026-10-02 15:53:45 GMT`（旧镜像路由响应为 15:53:33）；当前
 Vite 导航 hash map 为 **35 个键（首页 + 34 个专题）**，相对 9 月 27 日新增
 [CLI 与 Agent Skills 工作流](http://10.1.130.101/help/guide/cli-workflows.html) 和
 [共享数据集](http://10.1.130.101/help/data/datasets.html)。旧的
-`/help/assets/zenith-images.html` 仍返回 200，但只是约 916B 的 SPA 壳，不再作为独立专题引用。
+`/help/assets/zenith-images.html` 当前返回“页面不存在”，不再作为独立专题引用。
 关键页脚日期为：个人 API `2026-10-02 01:15`、CLI `2026-10-01 05:45`、共享数据集
-`2026-10-01 05:33`、快速开始 `2026-09-05 09:59`、配额 `2026-09-17 19:10`。
+`2026-10-01 05:33`、快速开始 `2026-09-05 09:59`、配额 `2026-10-02 21:04`。
 因此 9 月 27 日的 34 页快照已经过时，后续 Agent 必须先按当前导航补抓新页并重新读取契约。
 
 当前个人 API 页面称基础契约为 **2.11.0**，共享数据集和低优/资源区段分别标注
@@ -118,6 +123,21 @@ Vite 导航 hash map 为 **35 个键（首页 + 34 个专题）**，相对 9 月
 本次匿名读取 `/pt/api/openapi.json` 得到 OpenAPI 3.1.1、`info.version=2.19.0`、57 个
 paths，说明帮助正文与实际契约已经不同步。不能拼成单一“当前版本”；执行前应重新读取
 OpenAPI、`capabilities.api_version` 和 `schema_sha256`，以实际响应为准。
+
+逐页更新时间（当前可用专题共 34 个；首页无页脚日期）如下，旧日期页仍可能包含被新专题覆盖的正文：
+
+| 分组 | 页面与页脚日期 |
+|---|---|
+| 开始 | 平台简介 10-02 23:10；登录导航 10-02 23:29；总览 10-02 18:04；快速开始 09-05 09:59；资源说明 10-02 23:10；CLI/Skills 10-01 05:45 |
+| 计算 | 工作台 10-02 23:10；实例 10-02 21:50；连接 08-24 03:36 |
+| 训练 | 训练任务 10-02 23:10；推理 08-08 23:59 |
+| 资产与数据 | 镜像 10-02 23:10；模型 10-02 12:11；共享广场 10-02 12:11；存储 10-02 18:04；共享数据集 10-01 05:33；存储迁移 09-23 06:27；文件分享 08-24 03:36；跨云迁移 08-22 16:15 |
+| 项目与账户 | 项目协作 09-30 21:11；配额 10-02 21:04；学生制度 10-02 20:11；组织 09-15 16:27；SSH 密钥 09-16 20:30；Token 10-02 01:15；通知 09-13 23:54；反馈 09-11 19:58 |
+| 管理与参考 | 管理平台 10-02 20:20；纳管资源 10-02 13:33；权限 10-02 23:10；厂商差异 10-02 23:10；常见排障/FAQ 10-02 23:10 |
+
+连接、推理、文件分享、跨云迁移和快速开始页的页脚较旧；快速开始正文已出现部分新入口，不能只按页脚判断内容是否已被覆盖。
+旧 `assets/zenith-images.html` 当前为页面不存在，现行镜像入口只有 `assets/images.html`。
+
 全文核查后，用户已创建区 10 开发机并导入公钥；Agent 从已登录 Chrome 核对连接端点、公钥指纹与注入状态，
 复用 Windows OpenSSH 和已有密钥，以严格主机校验完成非交互命令（退出码 0）。
 GPU 设备可见；个人/公共目录的真实挂载证据见[数据页](zenith-data.md)。未由 Agent 创建算力或变更密钥。
@@ -148,7 +168,7 @@ GPU 设备可见；个人/公共目录的真实挂载证据见[数据页](zenith
 | 9 月 22 日该账号创建表单的存储开关禁用；9 月 27 日帮助仍描述初始授权挂载选择 | 重新核对实际表单与创建契约；不能将历史 UI 观察扩大为永久限制，创建后手调另受管理员权限约束 |
 | 帮助泛称公共池每区 512 GiB，实见区 5/10 为 2048、区 6 为 512 | 配置容量以当前存储页为准；不把旧数值当全平台上限 |
 | 帮助训练描述存储开关，9 月 22 日该账号表单无该区块 | 核对自动挂载配置，在已授权短任务中验证读写，见计算页；不能继承开发机路径假设 |
-| 新学生三档周额度、无项目低优、整节点预留 | 文档明确尚未全部上线；以当前有效策略/可见入口为准，详见账户页 |
+| 新学生三档周额度、无项目低优、整节点预留 | 帮助称已提供实现但需部署、启用制度和登记预留池；以当前有效策略/可见入口为准，详见账户页 |
 | 旧权限页说 Token 无细粒度 scope | 较新的个人 API 契约已有 scope、过期和开关控制；手动挂载 scope 已移除，见账户页 |
 | 9 月 22 日浏览器访问 schema 被拦截，9 月 26 日无凭据 GET 已成功 | 10 月 3 日匿名读取已为 2.19.0/57 paths；带凭据认证和资源操作仍未验收 |
 | 帮助正文仍写 2.11.0/2.14.0/2.17.0，当前 schema 为 2.19.0 | 以实时 OpenAPI 与 capabilities 为准；挂载字段和版本冲突见账户页，不猜实际接受行为 |
@@ -183,7 +203,7 @@ GPU 设备可见；个人/公共目录的真实挂载证据见[数据页](zenith
 |---|---|
 | 开始与全局概念 | [平台简介](http://10.1.130.101/help/guide/platform-overview.html)、[登录导航](http://10.1.130.101/help/guide/getting-started.html)、[总览](http://10.1.130.101/help/guide/dashboard.html)、[快速开始](http://10.1.130.101/help/guide/quick-start.html)、[资源关系](http://10.1.130.101/help/resources/overview.html) |
 | 计算 | [工作台](http://10.1.130.101/help/compute/workbench.html)、[实例](http://10.1.130.101/help/compute/instances.html)、[连接](http://10.1.130.101/help/compute/connection.html)、[训练](http://10.1.130.101/help/workloads/training.html)、[推理](http://10.1.130.101/help/workloads/inference.html) |
-| 资产 | [镜像与收藏](http://10.1.130.101/help/assets/images.html)、[Zenith 镜像（旧壳页）](http://10.1.130.101/help/assets/zenith-images.html)、[模型](http://10.1.130.101/help/assets/models.html)、[共享广场](http://10.1.130.101/help/assets/plaza.html) |
+| 资产 | [镜像与收藏](http://10.1.130.101/help/assets/images.html)、[模型](http://10.1.130.101/help/assets/models.html)、[共享广场](http://10.1.130.101/help/assets/plaza.html) |
 | 数据 | [存储](http://10.1.130.101/help/data/storage.html)、[共享数据集](http://10.1.130.101/help/data/datasets.html)、[换机迁移](http://10.1.130.101/help/data/storage-migration.html)、[文件分享](http://10.1.130.101/help/data/file-shares.html)、[跨云迁移](http://10.1.130.101/help/data/file-migrations.html) |
 | 协作与制度 | [项目成员](http://10.1.130.101/help/projects/overview.html)、[卡时费用](http://10.1.130.101/help/projects/quotas-billing.html)、[学生制度](http://10.1.130.101/help/projects/student-resource-policy.html)、[组织](http://10.1.130.101/help/account/organization.html) |
 | 账户与自动化 | [SSH 密钥](http://10.1.130.101/help/account/ssh-keys.html)、[Token](http://10.1.130.101/help/account/api-tokens.html)、[个人 API/CLI](http://10.1.130.101/help/reference/personal-api.html)、[CLI 与 Agent Skills](http://10.1.130.101/help/guide/cli-workflows.html)、[通知](http://10.1.130.101/help/account/notifications.html)、[反馈](http://10.1.130.101/help/account/feedback.html) |
