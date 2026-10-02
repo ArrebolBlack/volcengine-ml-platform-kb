@@ -127,14 +127,18 @@ Webhook：名称、HTTPS URL、可选签名密钥和事件，不选事件表示�
 
 ## 个人 API 与 CLI
 
-2026-09-27 全文重读[个人 API 原文](http://10.1.130.101/help/reference/personal-api.html)，并重新
-取得 [OpenAPI 2.0.1](http://10.1.130.101/pt/api/openapi.json)，核对全部 29 个路径、31 个操作
-（19 GET、11 POST、1 DELETE）。帮助尾部仍有 `2.0.0` 旧说明；API 版本不等于 CLI 包版本。
-契约与 9 月 26 日快照完全一致。没有安装 CLI、创建 Token 或验收带凭据调用；9 月 26 日无凭据 capabilities 返回 401。
+2026-09-27 全文重读[个人 API 原文](http://10.1.130.101/help/reference/personal-api.html)，当时取得的
+[OpenAPI 2.0.1](http://10.1.130.101/pt/api/openapi.json) 为 29 个路径、31 个操作（19 GET、11 POST、1 DELETE）。
+这份旧基线已过时：2026-10-03 匿名读取同一路径得到 OpenAPI 3.1.1、`info.version=2.19.0`、57 个
+paths，比旧基线新增 28 个路径，主要覆盖共享数据集、对象源/预签名/STS、实例 Platform-ID 与挂载
+别名、任务 Platform-ID/日志/副本诊断。现有路径的 schema 也可能改变，不能只按路径数量增量实现。
+个人 API 帮助页页脚为 2026-10-02 01:15；帮助正文仍把基础契约标成 2.11.0，并在扩展段落使用
+2.16.0/2.17.0，版本标记与线上 schema 2.19.0 不同。没有安装 CLI、创建 Token 或验收带凭据调用；
+这仍是本账号的实操状态。
 
 ### 自动化覆盖：官方 CLI、API 与系统 SSH
 
-以下是当前公开契约的覆盖情况，**通过 API/CLI 的资源操作仍未实测**；系统 SSH 的实测范围见下文。“未公开”仅指此次个人 API/CLI，
+以下按 2026-10-03 线上帮助和 schema 记录公开覆盖，**通过 API/CLI 的资源操作仍未实测**；系统 SSH 的实测范围见下文。“未公开”仅指此次个人 API/CLI，
 不否定控制台或厂商内部另有接口，也不授权复用它们绕过个人 API 边界。
 
 | 工作 | 官方 `zenith` CLI | 个人 API / 其余路径 |
@@ -142,15 +146,16 @@ Webhook：名称、HTTPS URL、可选签名密钥和事件，不选事件表示�
 | 身份、额度、项目、规格、镜像目录、实例查询 | 已说明命令 | API 已公开；项目仅查询，镜像目录不等于资产管理 |
 | 创建开发机、提交训练 | 帮助要求使用 HTTP API/生成客户端 | API 已公开，创建会启动/调度计算 |
 | 实例启动、停止、重启、同型号改配 | 已有，支持回执与有限效果核对 | API 已公开；停止不等于释放 |
-| 任务状态、取消、取消未返回 ID 的创建 | 取消命令已说明；状态用 API | API 已公开；取消回执成功后仍查终态 |
+| 任务状态、日志、副本诊断、取消、取消未返回 ID 的创建 | 取消命令已说明；状态/日志/副本用 HTTP API，CLI 的任务查询仍规划中 | 2.19.0 已公开 vendor 与 Platform-ID 查询、日志、副本及取消路径；取消回执成功后仍查终态 |
 | 公钥管理、补注入、SSH 信息 | 已有 | API 已公开；不生成或提供私钥 |
 | 非交互机内命令、文件传输 | `ssh connect` 要求 TTY | 个人 API 不执行 shell/传文件；控制台端点 + 系统 SSH 命令已实测，API 取端点和文件传输仍待验收 |
-| 平台原生训练日志、事件、TensorBoard、产物下载 | 未公开对应命令 | 2.0.1 无对应端点；控制台日志或经已验证持久卷取回工作负载输出 |
-| 实例删除、重建、换镜像、任务记录删除 | 未公开对应命令 | 2.0.1 无对应端点；按角色和厂商能力用控制台 |
+| 平台原生训练日志、事件、TensorBoard、产物下载 | 任务日志命令仍未实现 | 2.19.0 已公开本人任务日志/副本诊断读取；事件、TensorBoard、产物下载仍未形成个人 API 端到端方案 |
+| 实例删除、重建、换镜像、任务记录删除 | 未公开对应命令 | 当前 2.19.0 schema 仍无这些个人端点；按角色和厂商能力用控制台 |
 | 已有资源手动挂载 | 明确不提供 | Token 明确禁止，包括管理员 Token；仅总管理员控制台 |
-| 镜像构建/登记/分享、模型、文件分享/迁移 | 未公开对应命令 | 2.0.1 无资产写端点；按[数据与资产](zenith-data.md)使用有权入口 |
+| 共享数据集、对象源、签名 URL、STS | `storage sources/objects/upload-presign/download-presign/sts` 已说明；datasets 命令仍规划 | 2.19.0 已公开 datasets、对象源、预签名和 bucket STS；仍受 scope、项目授权和资源区限制 |
+| 镜像构建/登记/分享、模型、文件分享/迁移 | 未公开对应命令 | 个人 API 仍无这些资产管理写端点；按[数据与资产](zenith-data.md)使用有权入口 |
 | Token 创建/换发/撤销 | login/logout 只管理本地接入 | Token 不能管理 Token；用户菜单完成平台凭据引导 |
-| 项目/成员/组织/配额、推理等管理写入 | 未公开对应命令 | 2.0.1 无对应端点；控制台与管理员流程 |
+| 项目/成员/组织/配额、推理等管理写入 | 未公开对应命令 | 当前 2.19.0 schema 无对应个人写入端点；控制台与管理员流程 |
 
 Codex 可以在已授予的执行、网络及凭据权限内调用 CLI、HTTP 客户端和 OpenSSH；
 [Codex 官方非交互文档](https://learn.chatgpt.com/docs/non-interactive-mode)也支持以 `codex exec`
@@ -201,8 +206,26 @@ Token 会话不能管理 Token。停用/删除使后续请求失败，已受理�
 | 取消未获任务ID的创建 | `POST /operations/{创建操作ID}/cancel-job` |
 | 回执/原键查回 | `GET /operations/{id}`、`GET /operations/by-key`（带原 `Idempotency-Key`） |
 | 授权挂载盘 | `GET /me/mount-disks` |
+| 共享数据集 | `GET /ai/datasets`、`/{id}`、`/{id}/files`、`/{id}/file`；文件维护另有 `POST /file`、`/mkdir`、`/rename`、`/delete` |
+| 对象源和对象访问 | `GET /ai/files/sources`、`/objects`；预签名上传/下载和 `POST /ai/files/bucket-sts` |
+| 实例扩展 | Platform-ID 详情/启停/重启/改配/SSH/注入，以及 vendor/provider `GET .../mounts` |
+| 任务扩展 | Platform-ID 详情/取消/日志/副本诊断，以及 vendor 任务日志/副本诊断 |
 | SSH端点/注入/状态 | `GET /instances/{vendor}/{vendorInstanceId}/ssh-access`、`POST /instances/{vendor}/{vendorInstanceId}/inject-ssh-keys`、`GET /instances/{vendor}/{vendorInstanceId}/ssh-injections` |
 | 公钥管理 | `GET/POST /me/ssh-keys`、`GET/DELETE /me/ssh-keys/{id}` |
+
+#### 共享数据集、对象存储和资源区
+
+共享数据集是当前新增的个人 API 面：`datasets:read` 可列出数据集、目录和文件，
+`datasets:write` 仅在账号仍是维护者或管理员时允许上传、建目录、重命名和删除；Token
+不能登记、发布数据集或配置维护者。文件按相对路径传输，默认单文件上限 8 MiB，目录最多返回
+2000 项，写入没有幂等回执，超时后先查询再重试。创建开发机或训练时可用
+`mount_disk_ids` 只读挂载同一资源区的数据集；区 10 要用
+`GET /pt/api/ai/datasets?resource_zone=10`，平台不会跨区复制。
+
+对象源接口可列出项目已授权来源和对象，并生成上传/下载签名 URL；`bucket-sts` 需要
+`storage:read`、`storage:write`、`storage:sts` 及整桶读写授权，临时凭据有效期 900–43200 秒，
+只能读写对象，不能删对象、改 ACL、建删桶或修改平台绑定。CLI 将签名信息写入新建私有文件，
+STS 凭据文件必须为 0600；不得将内容输出到日志或对话。具体参数和挂载边界见[数据与资产](zenith-data.md)。
 
 开发机默认本人，`scope=projects`扩到项目可见元数据，不开放他人终端。
 个人 API 的 `GET /ai/jobs`只列本人提交任务，管理员 Token 也如此；详情则允许本人或当前管理的
@@ -268,7 +291,7 @@ description（≤1000字符）。镜像从 JOB 目录取，省略使用标准训
 image_vendor可约束其平台。代码与数据须预先在授权存储，接口不上传代码、不开放任意路径挂载。
 成功回执含 vendor/job_id/job_url。
 
-**初始挂载存在待核实的契约冲突。** 2.0.1 的两类创建 schema 均有 `mount_personal`、
+**初始挂载存在待核实的契约冲突。** 旧 2.0.1 基线的两类创建 schema 均有 `mount_personal`、
 `mount_project`、`mount_public`、`mount_disk_ids`；盘 ID 是已授权的平台 25 位 ID，最多20个且唯一，
 不是厂商 Fileset ID。训练创建说明允许这些初始授权选择；开发机 POST 说明却同时写“禁止挂载开关/盘 ID”
 和“允许已授权开关/盘 ID”。实际接受行为未验证，开发机示例省略这些字段，按平台自动配置并验证挂载。
@@ -287,7 +310,7 @@ image_vendor可约束其平台。代码与数据须预先在授权存储，接�
 镜像、挂载、SSH、卡时仍可能列在 unchecked，不能用预检通过替代挂载验收。
 `project_reservation_blocked` 表示其他项目保障影响准入，不能原样刷请求或未经任务授权自行转低优。
 `execution_class` 只接受 standard/low_priority，normal 返回400；低优要求火山。
-2.0.1 的开发机创建、训练创建和准入均接受 `resource_zone` 字符串 `1/2/3/4/5/6/10`：
+当前帮助仍声明开发机创建、训练创建和准入接受 `resource_zone` 字符串 `1/2/3/4/5/6/10`：
 1–4 是天翼（ctyun）pool01–04，5 是火山（volcengine），6 是无问（lanqi），10 是百度百舸（baidu）。
 这已解决旧文“区 10 参数/厂商未知”，但不证明当前账号在该区有容量或创建成功。
 
@@ -309,10 +332,11 @@ SSH 端点直接提供 `host/port/user` 等结构化字段。注入返回202的 
 
 ### CLI 安装与最小只读启动
 
-预览 CLI 要求 **Node.js 24、macOS/Linux**，Windows 凭据/恢复存储不支持。
-从平台 GitHub Release 获取 `zenith-cli-<版本>.tgz` 及配套安装说明/发布元数据，按官方安装说明验证来源；
-实际仓库未在帮助提供。帮助里的 `0.1.0-dev.1` 只是安装示例，不能当成最新版本。
-普通 CI 预览产物只保留14天，旧 Release 不自动补包。包不含 Node/Agent Skills，版本独立于平台发版。
+预览 CLI 要求 **Node.js 24、npm 11**，当前只验证 **macOS/Linux**；Windows 凭据与恢复存储尚未验证，
+不能在 Windows 上宣称无人值守可用。从有权限的私有 `cli-v<版本>` Release 获取同版本 CLI、Skills、
+清单、安装说明、NOTICE 和 SHA-256 文件，按官方安装说明验证来源；实际仓库未在帮助提供。
+帮助里的 `0.1.0-dev.1` 只是安装示例，不能当成最新版本。CLI 与 Skills 是独立归档，需同时保持版本和契约摘要一致。
+普通 CI 预览产物只保留14天，旧 Release 不自动补包；安装包不含 Node，版本也独立于平台发版。
 先阅读随包安装说明并确认包来源，再按对应版本安装：
 
 ```bash
