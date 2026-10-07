@@ -1,4 +1,6 @@
-# 任务 YAML 示例
+# 任务与开发机示例
+
+## 火山原生任务 YAML
 
 | 示例 | 用途 | 何时读取 |
 |---|---|---|
@@ -12,3 +14,11 @@
 公共字段参考 2026-09-19 实际生成的 `volc/1.2.55` 原生模板；vePFS 字段来自原知识库
 2026-07-24 的 CLI 配置记录，本轮未重新提交验证。示例通过本地结构检查不等于云端运行成功。
 机构/账户/镜像实际参数由项目提供，示例不预设其值。
+
+## Zenith 个人 API 示例
+
+- [zenith-instance.json](zenith-instance.json)：开发机创建字段；按 [Zenith 快速开始](../docs/zenith-quickstart.md) 填写实际资源区与镜像后使用。
+- [zenith-job.json](zenith-job.json)：标准单 Worker 训练；填入同镜像已验证的路径与入口，复制到项目私密配置目录再提交。
+
+`__...__` 是必须替换的占位符；示例不含 Token、真实资源 ID 或已验收的训练配置。
+它们是 Zenith HTTP body，不是上述原生 `volc` YAML。

@@ -1,0 +1,8 @@
+{
+  "name": "__DEV_NAME__",
+  "resource_zone": "__RESOURCE_ZONE__",
+  "image_id": "__IMAGE_ID__",
+  "execution_class": "standard",
+  "storage_mode": "personal",
+  "funding_mode": "personal"
+}

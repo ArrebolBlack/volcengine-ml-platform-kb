@@ -1,0 +1,8 @@
+{
+  "name": "__JOB_NAME__",
+  "resource_zone": "__RESOURCE_ZONE__",
+  "image_id": "__IMAGE_ID__",
+  "execution_class": "standard",
+  "replicas": 1,
+  "entrypoint": "cd '__PROJECT_DIR__' && exec '__PYTHON__' -u '__TRAIN_SCRIPT__'"
+}

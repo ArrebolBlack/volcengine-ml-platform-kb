@@ -11,11 +11,12 @@ def main():
              and not any(part.startswith('.') or part == '__pycache__'
                          or part == 'local_private' for part in p.relative_to(root).parts)]
     errors = []
-    if len(files) > 20 or sum(p.stat().st_size for p in files) > 1024 * 1024:
-        errors.append('Active knowledge exceeds 20 files or 1 MiB; review duplication.')
+    # 2026-10: Zenith adds one runbook, a small HTTP helper/test and two JSON examples.
+    if len(files) > 25 or sum(p.stat().st_size for p in files) > 1024 * 1024:
+        errors.append('Active knowledge exceeds 25 files or 1 MiB; review duplication.')
     if len((root / 'README.md').read_text(encoding='utf-8').splitlines()) > 60:
         errors.append('Root README exceeds 60 lines.')
-    allowed_suffixes = {'.md', '.yaml', '.py'}
+    allowed_suffixes = {'.md', '.yaml', '.py', '.json'}
     for path in files:
         rel = path.relative_to(root)
         if path.suffix not in allowed_suffixes:
