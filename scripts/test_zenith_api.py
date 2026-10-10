@@ -48,10 +48,22 @@ class ZenithApiTests(unittest.TestCase):
             ("/pt/api/ai/datasets/abc/file", "GET"),
             ("/pt/api/ai/datasets/%2e%2e", "GET"),
             ("/pt/api/me/ssh-keys", "POST"),
+            ("/pt/api/me/bucket-mounts", "POST"),
         ):
             with self.subTest(path=path), self.assertRaises(ValueError):
                 api.checked_url("http://zenith.example", path, method)
         self.assertEqual(api.checked_url("http://zenith.example", "http://zenith.example/pt/api/ai/jobs?page=2", "GET"), "http://zenith.example/pt/api/ai/jobs?page=2")
+
+    @patch.dict(os.environ, {"ZENITH_API_TOKEN": ""})
+    def test_bucket_mount_catalog_is_read_only(self):
+        payload = b'{"mounts":[{"id":"example-binding","read_only":true}]}'
+        with patch.object(api, "request", return_value=(200, payload, None)) as send:
+            code, out, err = self.run_cli(["get", "/pt/api/me/bucket-mounts"])
+            self.assertEqual(code, 0)
+            self.assertTrue(json.loads(out)["mounts"][0]["read_only"])
+            self.assertEqual(send.call_args.args[1:4],
+                             ("GET", "http://zenith.example/pt/api/me/bucket-mounts", "file-example"))
+            self.assertIsNone(send.call_args.args[5])
 
     @patch.dict(os.environ, {"ZENITH_API_TOKEN": ""})
     def test_post_keeps_key_and_sends_utf8(self):

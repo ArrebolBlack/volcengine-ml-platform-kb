@@ -19,7 +19,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 SEGMENT = r"[A-Za-z0-9_:-][A-Za-z0-9_.:-]*"
 GET_PATHS = (
     r"/pt/api/ai/capabilities",
-    r"/pt/api/me(?:/quota-usage|/card-hours|/mount-disks|/ssh-keys)?",
+    r"/pt/api/me(?:/quota-usage|/card-hours|/mount-disks|/bucket-mounts|/ssh-keys)?",
     rf"/pt/api/me/ssh-keys/{SEGMENT}",
     rf"/pt/api/projects(?:/{SEGMENT})?",
     rf"/pt/api/compute-offerings(?:/{SEGMENT}/images)?",

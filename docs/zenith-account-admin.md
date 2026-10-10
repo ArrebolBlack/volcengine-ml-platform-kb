@@ -1,7 +1,7 @@
 # Zenith 账户、配额、个人 API 与管理
 
 从[快速启动](zenith-quickstart.md)执行开发机或训练工作流；本页用于查权限、计费和 API 契约。
-2026-10-10 定向复核 OpenAPI 3.3.0、存储和项目帮助；其余沿用 10 月 7 日核查。已有控制台和只读 API 证据见下文；
+2026-10-10 当晚定向复核 OpenAPI 3.6.0、存储、训练和项目帮助；其余沿用 10 月 7 日核查。已有控制台和只读 API 证据见下文；
 API 创建、取消、启停、改配、STS 和管理写入未实测，不能把文档覆盖当作操作验收。
 
 ## 权限与资源归属
@@ -135,8 +135,8 @@ Webhook：名称、HTTPS URL、可选签名密钥和事件，不选事件表示�
 ## 个人 API 与 CLI
 
 2026-10-10 匿名读取[当前 OpenAPI](http://10.1.130.101/pt/api/openapi.json)：OpenAPI 3.1.1，
-`info.version=3.3.0`，59 个路径、62 个操作（61 个认证操作）。相较 10 月 3 日的 2.19.0，新增
-两种寻址形式的训练 metrics；训练提交已撤下 `max_runtime_seconds`，不能只按路径增量更新客户端。
+`info.version=3.6.0`，60 个路径、63 个操作（62 个认证操作）。当晚新增确认项目 TOS 挂载目录及
+两类创建的 `bucket_mount_ids`；两种寻址形式的训练 metrics 和撤下 `max_runtime_seconds` 已在此前版本提供。
 [个人 API](http://10.1.130.101/help/reference/personal-api.html)与 CLI 帮助仍夹有旧版本号、操作数和
 旧权限段落；参数以当前 schema 为准，具体控制台操作以较新对应功能章节为准，冲突见下文。
 2026-10-03 已用现有 Token 完成脱敏的只读 API 核验；2026-10-07 再次确认 capabilities 的
@@ -159,7 +159,7 @@ Webhook：名称、HTTPS URL、可选签名密钥和事件，不选事件表示�
 | 平台训练事件、TensorBoard、产物下载、训练终端 | 未形成 CLI 工作流 | 事件、TensorBoard、产物下载无个人 API 端到端方案；训练终端仅总管理员控制台，不向本人任务提供 SSH |
 | 实例删除、重建、换镜像、任务记录删除 | 未公开对应命令 | 当前 schema 无这些个人端点；按角色和厂商能力用控制台 |
 | 已有资源手动挂载 | 明确不提供 | Token 禁止；控制台本人可改同区项目/公共挂载，个人盘与自定义路径由总管理员处理，见[数据页](zenith-data.md#挂载权限与现有机器补挂) |
-| 共享数据集、对象源、签名 URL、STS | `storage sources/objects/upload-presign/download-presign/sts` 已说明；datasets 命令仍规划 | API 已公开，仍受 scope、项目授权和资源区限制 |
+| 共享数据集、授权盘/桶挂载候选、对象源、签名 URL、STS | `storage sources/objects/upload-presign/download-presign/sts` 已说明；新增挂载候选的 CLI 覆盖未复核 | API 已公开，仍受 scope、项目授权和资源区限制 |
 | 镜像构建/登记/分享、模型、文件分享/迁移 | 未公开对应命令 | 个人 API 仍无这些资产管理写端点；按[数据与资产](zenith-data.md)使用有权入口 |
 | Token 创建/换发/撤销 | login/logout 只管理本地接入 | Token 不能管理 Token；用户菜单完成平台凭据引导 |
 | 项目/成员/组织/配额、推理等管理写入 | 未公开对应命令 | 当前 schema 无对应个人写入端点；控制台与管理员流程 |
@@ -224,6 +224,7 @@ Token 会话不能管理 Token。停用/删除使后续请求失败，已受理�
 | 取消未获任务ID的创建 | `POST /operations/{创建操作ID}/cancel-job` |
 | 回执/原键查回 | `GET /operations/{id}`、`GET /operations/by-key`（带原 `Idempotency-Key`） |
 | 授权挂载盘 | `GET /me/mount-disks` |
+| 项目 TOS 挂载候选 | `GET /me/bucket-mounts`；创建时选 `bucket_mount_ids`，具体边界见[数据页](zenith-data.md#挂载权限与现有机器补挂) |
 | 共享数据集 | `GET /ai/datasets`、`/{id}`、`/{id}/files`、`/{id}/file`；文件维护另有 `POST /file`、`/mkdir`、`/rename`、`/delete` |
 | 对象源和对象访问 | `GET /ai/files/sources`、`/objects`；`POST /ai/files/presign`、`/download-presign`、`/bucket-sts` |
 | 实例扩展 | `GET /ai/instances/{instanceId}`、`POST /ai/instances/{instanceId}/{start,stop,restart}`、`POST /instances/{instanceId}/resize`、`GET /instances/{instanceId}/ssh-access`、`POST /instances/{instanceId}/inject-ssh-keys`、`GET /instances/{instanceId}/ssh-injections`、`GET /ai/instances/{instanceId}/mounts` |
@@ -237,7 +238,7 @@ Token 会话不能管理 Token。停用/删除使后续请求失败，已受理�
 `datasets:write` 仅在账号仍是维护者或管理员时允许上传、建目录、重命名和删除；Token
 不能登记、发布数据集或配置维护者。文件按相对路径传输，默认单文件上限 8 MiB，目录最多返回
 2000 项，写入没有幂等回执，超时后先查询再重试。创建开发机或训练时可用
-`mount_disk_ids` 只读挂载同一资源区的数据集；区 10 要用
+`mount_disk_ids` 只读挂载同一资源区的数据集；这个字段另支持直接个人授权的登记盘，见[挂载字段](zenith-data.md#挂载权限与现有机器补挂)。区 10 数据集要用
 `GET /pt/api/ai/datasets?resource_zone=10`，平台不会跨区复制。
 
 对象源接口可列出项目已授权来源和对象，并生成上传/下载签名 URL；`bucket-sts` 需要
@@ -255,7 +256,7 @@ STS 凭据文件必须为 0600；不得将内容输出到日志或对话。具�
 因此 `stale=false` 也不等于近期在线。分页和 CLI 截断规则见下。
 
 查询常用 scope：资料/额度 `profile:read`、项目 `projects:read`、规格/镜像/准入 `catalog:read`、
-实例 `instances:read`、任务 `jobs:read`、回执 `operations:read`、授权盘/对象源 `storage:read`、
+实例 `instances:read`、任务 `jobs:read`、回执 `operations:read`、授权盘/桶挂载候选/对象源 `storage:read`、
 对象写入 `storage:write`、STS `storage:sts`、共享数据集读取/维护 `datasets:read`/`datasets:write`。
 capabilities 不另要求 scope，但仍需有效 Bearer。单个写请求的 scope 如下；CLI/完整工作流还需
 查询与回执 scope，不能将组合需求误当成单个 POST 的要求。
@@ -338,11 +339,10 @@ description（≤1000字符）。`image_id` 可选；提供时必须来自目标
 `phase=before_dispatch`、`retryable=false`，不会创建回执或派发任务。当前没有统一平台自动限时保障；
 若任务必须按时自动停止，应先解决这一要求，不得自行删字段后无限期提交。
 
-当前 schema 的属性定义支持两类创建的 `mount_personal`、`mount_project`、`mount_public` 和
-`mount_disk_ids`。盘 ID 是已发布且当前账号有权使用的数据集 ID（25 位小写字母/数字），只允许同一
-`resource_zone` 只读挂载；其他原生 Fileset/任意盘走有权控制台入口。schema 操作总述仍有“namespace flags
-仅管理员”的旧句，与属性定义及最新训练说明冲突；最小请求优先保留平台默认挂载，仅按需要选择已发布数据集，
-显式开关尚未通过本账号 API 写入验收。显式挂载字段与
+当前 schema 的两类创建均支持自动目录开关、`mount_disk_ids` 和项目 TOS 的 `bucket_mount_ids`；
+准确的候选来源、路径和读写边界统一见[挂载字段](zenith-data.md#挂载权限与现有机器补挂)。
+schema 操作总述仍有“namespace flags 仅管理员”的旧句，与属性定义及最新训练说明冲突；
+最小请求优先保留平台默认挂载，显式开关尚未通过本账号 API 写入验收。显式挂载字段与
 `storage_mode` 的冲突由 schema 拒绝，不能以省略字段推断实际挂载；创建后手动调整仍不授予个人 Token。
 创建和准入 schema 均为 `additionalProperties: false`，不加入猜测的厂商字段。
 

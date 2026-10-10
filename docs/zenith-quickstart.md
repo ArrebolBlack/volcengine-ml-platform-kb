@@ -2,7 +2,7 @@
 
 适用于本项目或新项目的 **Python 3 + 个人 HTTP API + OpenSSH** 路线，不依赖官方 CLI 安装。
 使用 [zenith_api.py](../scripts/zenith_api.py)，先读参数和做查询，再执行所需分支。
-字段依据 2026-10-10 OpenAPI 3.3.0；[账户与 API](zenith-account-admin.md)解释完整权限，
+字段依据 2026-10-10 当晚 OpenAPI 3.6.0；[账户与 API](zenith-account-admin.md)解释完整权限，
 [计算页](zenith-compute.md)解释 DDP/回收，[数据页](zenith-data.md)解释持久路径和大数据。
 
 ## 1. 一次性准备
@@ -48,6 +48,8 @@ $Caps.job_submission
 $Caps.resource_zones | Format-Table
 $Projects = Invoke-Zenith get /pt/api/projects | ConvertFrom-Json
 $Projects.projects | Select-Object id,name
+Invoke-Zenith get /pt/api/me/mount-disks
+Invoke-Zenith get /pt/api/me/bucket-mounts
 $Catalog = Invoke-Zenith get /pt/api/compute-offerings | ConvertFrom-Json
 $Catalog.offerings | Select-Object id,name,gpu_count,available,job_available
 Invoke-Zenith get /pt/api/me/quota-usage
@@ -61,7 +63,12 @@ $Instances.instances | Select-Object id,vendor,vendor_instance_id,name,status,st
 名称只用于识别，目标选返回的 ID。新建开发机看 `available`，训练看 `job_available`，
 再看该 offering 的 `capabilities_by_resource_zone`、对应存储预览、worker 状态和执行类别。
 这些不预留 GPU。新项目没有平台项目关系时可走个人任务；不能编造 `project_id`。
-学生标准任务资格、卡时、规格和低优份额仍由平台检查。
+学生标准任务资格、卡时、规格和低优份额仍由平台检查。正式项目成员资格可以允许个人标准任务；
+任务若选择项目，还会受该项目存储的资源区约束，两者不是同一个检查。
+
+`mount-disks` 是登记盘/数据集目录，`bucket-mounts` 是项目 TOS 候选目录；二者的 ID 不混用。
+需要显式挂载时，按[挂载字段边界](zenith-data.md#挂载权限与现有机器补挂)填写创建 body；
+项目桶必须匹配所选项目及区 5，列出候选不等于机内挂载已成功。
 
 选择规格后，分别查询工作负载的镜像：
 
