@@ -1,7 +1,7 @@
 # Zenith 账户、配额、个人 API 与管理
 
 从[快速启动](zenith-quickstart.md)执行开发机或训练工作流；本页用于查权限、计费和 API 契约。
-2026-10-07 按在线帮助及 OpenAPI 3.1.0 复核。已有控制台和只读 API 证据见下文；
+2026-10-10 定向复核 OpenAPI 3.3.0、存储和项目帮助；其余沿用 10 月 7 日核查。已有控制台和只读 API 证据见下文；
 API 创建、取消、启停、改配、STS 和管理写入未实测，不能把文档覆盖当作操作验收。
 
 ## 权限与资源归属
@@ -134,8 +134,8 @@ Webhook：名称、HTTPS URL、可选签名密钥和事件，不选事件表示�
 
 ## 个人 API 与 CLI
 
-2026-10-07 匿名读取[当前 OpenAPI](http://10.1.130.101/pt/api/openapi.json)：OpenAPI 3.1.1，
-`info.version=3.1.0`，59 个路径、62 个操作（61 个认证操作）。相较 10 月 3 日的 2.19.0，新增
+2026-10-10 匿名读取[当前 OpenAPI](http://10.1.130.101/pt/api/openapi.json)：OpenAPI 3.1.1，
+`info.version=3.3.0`，59 个路径、62 个操作（61 个认证操作）。相较 10 月 3 日的 2.19.0，新增
 两种寻址形式的训练 metrics；训练提交已撤下 `max_runtime_seconds`，不能只按路径增量更新客户端。
 [个人 API](http://10.1.130.101/help/reference/personal-api.html)与 CLI 帮助仍夹有旧版本号、操作数和
 旧权限段落；参数以当前 schema 为准，具体控制台操作以较新对应功能章节为准，冲突见下文。
@@ -302,10 +302,12 @@ capabilities 不另要求 scope，但仍需有效 Bearer。单个写请求的 sc
 镜像；提供时必须是目标资源区已登记且启用的镜像。存储按本人、项目、资源区规则自动配置，不能提交原生存储 ID 或任意路径。
 成功回执含 vendor/vendor_instance_id/instance_url；创建会启动计算资源。
 
-开发机创建及准入支持 `storage_mode: personal | without_personal | without_personal_project`：
+开发机创建及准入支持 `storage_mode: auto | personal | without_personal | without_personal_project`。
+`auto` 按配置的路由顺序保留相容且获授权的存储，并允许已配置天翼公共存储路线；显式资源区、镜像与盘约束仍有效，
+且不能与要求个人/项目挂载的开关冲突。显式模式的含义为：
 `personal` 保留个人存储；`without_personal` 只关闭个人存储，仍受项目存储所在资源区约束；
 `without_personal_project` 同时关闭个人和项目存储，但保留权限范围内的公共存储。后两者不能与
-个人/项目挂载开关或 `mount_disk_ids` 冲突；天翼网页模式要求显式选择其中之一。显式资源区、镜像和
+个人/项目挂载开关或 `mount_disk_ids` 冲突；天翼网页模式还可使用已配置公共存储的 `auto`。显式资源区、镜像和
 项目计算配额仍限制落点，不会跨区复制数据。
 **训练创建 schema 没有 `storage_mode` 或 `funding_mode`，不要照搬开发机字段。**
 
@@ -415,7 +417,7 @@ CLI 开发机默认50条，page-size 1–100；`--all`最多100页/10000条，�
 检查 JSON pagination 完整性/截断、stale 和 last_seen_at。
 
 当前 HTTP 镜像目录在本地已登记启用清单上按 `q/workload/resource_zone` 筛选后分页，
-`page_size` 为 1–50，响应 `total` 是分页前的精确匹配数；保持相同过滤条件，按 total 读完各页。
+`page_size` 为 1–500，默认 20，响应 `total` 是分页前的精确匹配数；保持相同过滤条件，按 total 读完各页。
 旧服务器兼容响应可能缺少 total，此时保留完整性未知，不能仅凭短页推断全量。
 官方 CLI 文档仍描述镜像 `pagination.complete` 可为未知且无全量选项，须按已安装 CLI 的输出判断，
 不能把旧 CLI 限制套到当前 HTTP 契约。503 表示依赖不可用，不能解释为空目录。

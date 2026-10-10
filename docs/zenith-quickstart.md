@@ -2,7 +2,7 @@
 
 适用于本项目或新项目的 **Python 3 + 个人 HTTP API + OpenSSH** 路线，不依赖官方 CLI 安装。
 使用 [zenith_api.py](../scripts/zenith_api.py)，先读参数和做查询，再执行所需分支。
-字段依据 2026-10-07 OpenAPI 3.1.0；[账户与 API](zenith-account-admin.md)解释完整权限，
+字段依据 2026-10-10 OpenAPI 3.3.0；[账户与 API](zenith-account-admin.md)解释完整权限，
 [计算页](zenith-compute.md)解释 DDP/回收，[数据页](zenith-data.md)解释持久路径和大数据。
 
 ## 1. 一次性准备
@@ -67,13 +67,23 @@ $Instances.instances | Select-Object id,vendor,vendor_instance_id,name,status,st
 
 ```powershell
 $OfferingId = '<上表选中的 offering id>'
+$ResourceZone = '<该 offering 对应的 resource_zone>'
 $Workload = 'DEV_INSTANCE' # 训练改 JOB
-$Images = Invoke-Zenith get "/pt/api/compute-offerings/$OfferingId/images?workload=$Workload&page=1&page_size=50" | ConvertFrom-Json
-$Images.images | Select-Object image_id,name,resource_zone,vendor
+$ImageRows = @()
+$ImagePage = 1
+do {
+    $Images = Invoke-Zenith get "/pt/api/compute-offerings/$OfferingId/images?workload=$Workload&resource_zone=$ResourceZone&page=$ImagePage&page_size=500" | ConvertFrom-Json
+    if ($null -eq $Images.total) { throw 'Image catalog completeness is unknown: total is missing.' }
+    if ($Images.images.Count -eq 0 -and $ImageRows.Count -lt $Images.total) { throw 'Image catalog ended before total; inspect the response.' }
+    $ImageRows += $Images.images
+    $ImagePage++
+} while ($ImageRows.Count -lt $Images.total)
+$ImageRows | Select-Object image_id,name,resource_zone,vendor
 ```
 
 选择同一资源区的精确 `image_id`，不是镜像名称或随意填完整 registry 地址；
 不要把平台默认镜像视为已有项目依赖。开发机和训练的 offering/镜像可能不同，要分别查询。
+当前每页最多 500 条；第一页面未出现某镜像不代表完整目录没有。筛选和翻页条件须保持一致。
 
 ## 3A. 已有开发机：启动与连接
 
