@@ -1,7 +1,7 @@
 # Zenith 账户、配额、个人 API 与管理
 
 从[快速启动](zenith-quickstart.md)执行开发机或训练工作流；本页用于查权限、计费和 API 契约。
-2026-10-10 当晚定向复核 OpenAPI 3.6.0、存储、训练和项目帮助；其余沿用 10 月 7 日核查。已有控制台和只读 API 证据见下文；
+2026-10-11 补核 OpenAPI 3.7.0 与存储帮助的 TOS/BOS 挂载；训练和项目帮助沿用 10 月 10 日核查，其余沿用 10 月 7 日。已有控制台和只读 API 证据见下文；
 API 创建、取消、启停、改配、STS 和管理写入未实测，不能把文档覆盖当作操作验收。
 
 ## 权限与资源归属
@@ -134,9 +134,9 @@ Webhook：名称、HTTPS URL、可选签名密钥和事件，不选事件表示�
 
 ## 个人 API 与 CLI
 
-2026-10-10 匿名读取[当前 OpenAPI](http://10.1.130.101/pt/api/openapi.json)：OpenAPI 3.1.1，
-`info.version=3.6.0`，60 个路径、63 个操作（62 个认证操作）。当晚新增确认项目 TOS 挂载目录及
-两类创建的 `bucket_mount_ids`；两种寻址形式的训练 metrics 和撤下 `max_runtime_seconds` 已在此前版本提供。
+2026-10-11 匿名读取[当前 OpenAPI](http://10.1.130.101/pt/api/openapi.json)：OpenAPI 3.1.1，
+`info.version=3.7.0`，60 个路径、63 个操作（62 个认证操作）。项目桶候选和两类创建的
+`bucket_mount_ids` 已明确支持 TOS/BOS；两种寻址形式的训练 metrics 和撤下 `max_runtime_seconds` 已在此前版本提供。
 [个人 API](http://10.1.130.101/help/reference/personal-api.html)与 CLI 帮助仍夹有旧版本号、操作数和
 旧权限段落；参数以当前 schema 为准，具体控制台操作以较新对应功能章节为准，冲突见下文。
 2026-10-03 已用现有 Token 完成脱敏的只读 API 核验；2026-10-07 再次确认 capabilities 的
@@ -224,7 +224,7 @@ Token 会话不能管理 Token。停用/删除使后续请求失败，已受理�
 | 取消未获任务ID的创建 | `POST /operations/{创建操作ID}/cancel-job` |
 | 回执/原键查回 | `GET /operations/{id}`、`GET /operations/by-key`（带原 `Idempotency-Key`） |
 | 授权挂载盘 | `GET /me/mount-disks` |
-| 项目 TOS 挂载候选 | `GET /me/bucket-mounts`；创建时选 `bucket_mount_ids`，具体边界见[数据页](zenith-data.md#挂载权限与现有机器补挂) |
+| 项目 TOS/BOS 挂载候选 | `GET /me/bucket-mounts`；创建时选 `bucket_mount_ids`，具体边界见[数据页](zenith-data.md#挂载权限与现有机器补挂) |
 | 共享数据集 | `GET /ai/datasets`、`/{id}`、`/{id}/files`、`/{id}/file`；文件维护另有 `POST /file`、`/mkdir`、`/rename`、`/delete` |
 | 对象源和对象访问 | `GET /ai/files/sources`、`/objects`；`POST /ai/files/presign`、`/download-presign`、`/bucket-sts` |
 | 实例扩展 | `GET /ai/instances/{instanceId}`、`POST /ai/instances/{instanceId}/{start,stop,restart}`、`POST /instances/{instanceId}/resize`、`GET /instances/{instanceId}/ssh-access`、`POST /instances/{instanceId}/inject-ssh-keys`、`GET /instances/{instanceId}/ssh-injections`、`GET /ai/instances/{instanceId}/mounts` |
@@ -339,7 +339,7 @@ description（≤1000字符）。`image_id` 可选；提供时必须来自目标
 `phase=before_dispatch`、`retryable=false`，不会创建回执或派发任务。当前没有统一平台自动限时保障；
 若任务必须按时自动停止，应先解决这一要求，不得自行删字段后无限期提交。
 
-当前 schema 的两类创建均支持自动目录开关、`mount_disk_ids` 和项目 TOS 的 `bucket_mount_ids`；
+当前 schema 的两类创建均支持自动目录开关、`mount_disk_ids` 和项目 TOS/BOS 的 `bucket_mount_ids`；
 准确的候选来源、路径和读写边界统一见[挂载字段](zenith-data.md#挂载权限与现有机器补挂)。
 schema 操作总述仍有“namespace flags 仅管理员”的旧句，与属性定义及最新训练说明冲突；
 最小请求优先保留平台默认挂载，显式开关尚未通过本账号 API 写入验收。显式挂载字段与

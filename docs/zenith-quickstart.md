@@ -2,7 +2,7 @@
 
 适用于本项目或新项目的 **Python 3 + 个人 HTTP API + OpenSSH** 路线，不依赖官方 CLI 安装。
 使用 [zenith_api.py](../scripts/zenith_api.py)，先读参数和做查询，再执行所需分支。
-字段依据 2026-10-10 当晚 OpenAPI 3.6.0；[账户与 API](zenith-account-admin.md)解释完整权限，
+字段依据 2026-10-11 复核的 OpenAPI 3.7.0；[账户与 API](zenith-account-admin.md)解释完整权限，
 [计算页](zenith-compute.md)解释 DDP/回收，[数据页](zenith-data.md)解释持久路径和大数据。
 
 ## 1. 一次性准备
@@ -66,9 +66,10 @@ $Instances.instances | Select-Object id,vendor,vendor_instance_id,name,status,st
 学生标准任务资格、卡时、规格和低优份额仍由平台检查。正式项目成员资格可以允许个人标准任务；
 任务若选择项目，还会受该项目存储的资源区约束，两者不是同一个检查。
 
-`mount-disks` 是登记盘/数据集目录，`bucket-mounts` 是项目 TOS 候选目录；二者的 ID 不混用。
+`mount-disks` 是登记盘/数据集目录，`bucket-mounts` 是项目 TOS/BOS 候选目录；二者的 ID 不混用。
 需要显式挂载时，按[挂载字段边界](zenith-data.md#挂载权限与现有机器补挂)填写创建 body；
-项目桶必须匹配所选项目及区 5，列出候选不等于机内挂载已成功。
+项目桶必须匹配所选项目、厂商及资源区：火山 TOS 对应区 5，百度 BOS 对应区 10，不能混选。
+列出候选不等于机内挂载已成功，也不表示火山桶可跨云挂到百度计算。
 
 选择规格后，分别查询工作负载的镜像：
 
