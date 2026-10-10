@@ -1,8 +1,8 @@
 # Zenith 账户、配额、个人 API 与管理
 
 从[快速启动](zenith-quickstart.md)执行开发机或训练工作流；本页用于查权限、计费和 API 契约。
-2026-10-11 补核 OpenAPI 3.7.0 与存储帮助的 TOS/BOS 挂载；训练和项目帮助沿用 10 月 10 日核查，其余沿用 10 月 7 日。已有控制台和只读 API 证据见下文；
-API 创建、取消、启停、改配、STS 和管理写入未实测，不能把文档覆盖当作操作验收。
+2026-10-11 补核 OpenAPI 3.8.0 的 TOS/BOS 挂载点；存储、训练和项目帮助沿用前次核查，其余沿用 10 月 7 日。
+HTTP helper 的已有机启停、改配及新建失败边界见[实测证据](zenith.md#实测证据与剩余边界)；未覆盖的操作不能视为已验收。
 
 ## 权限与资源归属
 
@@ -135,17 +135,19 @@ Webhook：名称、HTTPS URL、可选签名密钥和事件，不选事件表示�
 ## 个人 API 与 CLI
 
 2026-10-11 匿名读取[当前 OpenAPI](http://10.1.130.101/pt/api/openapi.json)：OpenAPI 3.1.1，
-`info.version=3.7.0`，60 个路径、63 个操作（62 个认证操作）。项目桶候选和两类创建的
-`bucket_mount_ids` 已明确支持 TOS/BOS；两种寻址形式的训练 metrics 和撤下 `max_runtime_seconds` 已在此前版本提供。
+`info.version=3.8.0`，60 个路径、63 个操作（62 个认证操作）。项目桶候选和两类创建的
+`bucket_mount_ids` 支持 TOS/BOS，新旧挂载路径规则见[挂载字段](zenith-data.md#挂载权限与现有机器补挂)；
+两种寻址形式的训练 metrics 和撤下 `max_runtime_seconds` 已在此前版本提供。
 [个人 API](http://10.1.130.101/help/reference/personal-api.html)与 CLI 帮助仍夹有旧版本号、操作数和
 旧权限段落；参数以当前 schema 为准，具体控制台操作以较新对应功能章节为准，冲突见下文。
 2026-10-03 已用现有 Token 完成脱敏的只读 API 核验；2026-10-07 再次确认 capabilities 的
-`api_version=3.1.0`，并通过只读 `POST admission` 准入预检。本次没有安装 CLI 或执行资源变更。
+`api_version=3.1.0`，并通过只读 `POST admission` 准入预检。该次没有安装 CLI 或执行资源变更。
 本轮查询和准入验证范围以[快速启动实测记录](zenith-quickstart.md)为准。
 
 ### 自动化覆盖：官方 CLI、API 与系统 SSH
 
-以下按 2026-10-07 线上帮助、schema 和已有只读 API 实测记录公开覆盖；**API/CLI 的创建、取消、启停、改配和 STS 写入仍未实测**；系统 SSH 的实测范围见下文。“未公开”仅指此次个人 API/CLI，
+以下区分公开接口与实际验收；HTTP helper 写入的已验证范围见[实测证据](zenith.md#实测证据与剩余边界)，
+CLI 写入与 STS 仍未实测；系统 SSH 的实测范围见下文。“未公开”仅指此次个人 API/CLI，
 不否定控制台或厂商内部另有接口，也不授权复用它们绕过个人 API 边界。
 
 | 工作 | 官方 `zenith` CLI | 个人 API / 其余路径 |
