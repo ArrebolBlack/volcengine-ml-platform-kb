@@ -4,7 +4,7 @@
 2026-10-07 已复核当前帮助与 OpenAPI 3.1.0；下文旧表单观察仅作历史说明。
 区 10 单卡控制台任务、开发机停启、SSH 复连及 PFS 持久性已于 10 月 3 日验收；
 HTTP helper 的已有机启停、改配与新建失败边界见[实测证据](zenith.md#实测证据与剩余边界)；
-API 训练提交、多节点训练和新低优调度仍未实测。
+2026-10-11 已验证区 10 个人 API 提交及两节点 DDP，契约见下文；份额回收及抢占恢复仍未因此验收。
 
 ## 开发机：创建到运行
 
@@ -171,6 +171,42 @@ torchrun \
 MLP 提供节点信息；`torchrun` 设置 `RANK/LOCAL_RANK/WORLD_SIZE`。代码需支持 DDP，通常按
 `LOCAL_RANK` 绑 GPU 并使用 `env://`。不要为所有 Worker 写死相同 node rank/master，或把环境缺失
 静默改成单机训练。缺必需变量即失败是模板的预期。同构 DDP 不加 `ps` 角色。
+
+**区 10 百度 AIHC 的实测多节点契约（2026-10-11）**：Zenith 申请每 Worker 8 张 PRO6000、
+`replicas=2`，合计 16 卡；本次提交省略 `framework`，平台默认任务类型实际注入了下列 PyTorch
+节点变量。不要据此假定所有默认任务类型或其他资源区都相同；入口先核对变量与申请拓扑。
+
+| 容器入口变量 | 此次实际值与含义 |
+|---|---|
+| `RANK` | 两容器分别为 `0`、`1`，此时是节点编号 |
+| `WORLD_SIZE` | `2`，此时是节点数，尚不是训练进程总数 |
+| `NPROC_PER_NODE` | `8`，每节点可用 GPU 数 |
+| `MASTER_ADDR`、`MASTER_PORT` | 平台注入的主节点地址与通信端口；本次端口为 `23456`，入口仍读取实际值 |
+
+先保存节点变量，再启动每节点的 `torchrun`；下式仅适用已核对为上述 AIHC 契约的任务：
+
+```bash
+node_rank="${RANK:?}"
+node_count="${WORLD_SIZE:?}"
+local_gpus="${NPROC_PER_NODE:?}"
+master_addr="${MASTER_ADDR:?}"
+master_port="${MASTER_PORT:?}"
+unset RANK WORLD_SIZE LOCAL_RANK LOCAL_WORLD_SIZE GROUP_RANK ROLE_RANK ROLE_WORLD_SIZE
+unset MASTER_ADDR MASTER_PORT TORCHELASTIC_RUN_ID
+exec torchrun --nnodes="$node_count" --nproc-per-node="$local_gpus" \
+  --node-rank="$node_rank" --master-addr="$master_addr" --master-port="$master_port" \
+  --max-restarts=0 train.py
+```
+
+训练子进程使用 `torchrun` 重新注入的进程级 `RANK=0…15`、`WORLD_SIZE=16` 和各节点
+`LOCAL_RANK=0…7`。跨节点不要使用 `--standalone`，也不要将节点级 `WORLD_SIZE=2` 直接传给
+训练代码作 DDP world size。此契约与上面的火山 `MLP_*` 模板分别适用。
+
+任务 `job-3snbx1y2sa5b` 已通过 16 rank 拓扑 all-gather、真实模型 DDP 前后向及持久 checkpoint；
+日志确认 NCCL `NET/IB` 使用 RoCE。单 Worker 8 卡对照任务 `job-i03nr37f00j1` 同样完成。
+这验证了本次镜像、队列与两节点配置的实际通信，不保证未来容量、更多节点、其他镜像的 RDMA
+或跨分配抢占恢复；地址、端口和网络设备名不应写死。
+变量语义与[百度 AIHC 官方环境变量说明](https://cloud.baidu.com/doc/AIHC/s/mm346i20k)一致。
 
 准备镜像依赖 → 小规模验证命令和持久输出 → 核对总 GPU、项目/个人额度、镜像与挂载 → 创建。
 帮助声明若提交提示“准备/结果待确认”，保留锁定配置并用“重试同一操作”，避免改名重复创建。
