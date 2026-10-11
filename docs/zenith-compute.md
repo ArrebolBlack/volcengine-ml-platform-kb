@@ -223,13 +223,27 @@ exec torchrun --nnodes="$node_count" --nproc-per-node="$local_gpus" \
 已完成仍要验收输出/指标；失败看退出码、事件和真实程序日志；停止中断未保存进度；删除终态记录前
 保存诊断资料，任务删除不等于删除底层存储文件。
 
-当前匿名 OpenAPI 3.1.0 已公开本人训练日志、指标和副本诊断读取路径，但仍没有把事件、TensorBoard
-或产物下载变成已验收的个人自动化闭环。CLI 任务查询/日志/副本命令仍规划中。命令行自动化可由训练入口将
+2026-10-12 复核匿名 OpenAPI 3.8.0：本人训练日志与副本读取使用
+`/pt/api/ai/jobs/{vendor}/{jobId}/logs`、`/replicas`，或 `/pt/api/ai/jobs/by-id/{id}` 下对应路径；
+仍没有把事件、TensorBoard 或产物下载变成已验收的个人自动化闭环。CLI 任务查询/日志/副本命令仍规划中。
+命令行自动化可由训练入口将
 stdout/stderr、退出结果和产物写入已验证的持久目录，再由挂同一卷的本人开发机取回；
 持久输出的区 10 单卡路径已有下述证据，但完整日志交接仍待实测，不能在任务未启动时提供调度错误日志。
 指标通过 `/pt/api/ai/jobs/{vendor}/{jobId}/metrics` 或 by-id 对应路径读取，需 `jobs:read`。
 训练终端仅总管理员可用，任务本人/项目管理员及个人 Token 均无训练终端权；不能把开发机 SSH 套到副本上。
 任务 ID 不能作为开发机 ID 用于 SSH；非交互连接方法见[API/CLI](zenith-account-admin.md)。
+
+2026-10-12 实查区 10 百度多节点任务：PFS 原生训练记录持续推进，而 vendor 与 by-id 两组官方日志接口
+均返回 HTTP 200、`returned=0`、`pending=true`、`next_cursor=null`，副本数均为 0。by-id 使用同一厂商
+适配器，不能绕过该观测缺口；空日志或空副本列表不能判定训练未运行。
+只读比对收据见[本机证据](C:/workspace/se3-wam-research/local_private/zenith-logs-projection-20261012/comparison-summary.json)；
+具体训练进度与验收归研究仓库。本次未修改云端任务，也未验收上游日志修复。
+
+维护者应核对百度 v2 [DescribeJob](https://cloud.baidu.com/doc/AIHC/s/Kmayvejf0) 的 `needDetail=true`：
+该条件才返回 `pods/historyPods`，任务列表不含这些副本详情；
+[DescribeJobLogs](https://cloud.baidu.com/doc/AIHC/s/Hmayvkw26) 要求真实 `podName`，并须核对任务对应的
+`resourcePoolId/queueID` 与 v2 路由，响应日志及分页字段为 `logs/nextMarker`。
+这些是官方接口规定的定向排查点，尚非已查明根因；不得猜测 Pod 名称、私有路由，或据此重建健康训练。
 
 2026-10-03 已实测一次最小闭环：页面选择 `PRO6000`、1 卡、资源区 10、标准、个人任务，默认
 `aibox-pytorch:v1.0-torch2.7.1-cu12.8` 与 `PyTorchJob`；入口命令只检查 CUDA/挂载并写入
