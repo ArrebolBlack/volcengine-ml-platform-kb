@@ -224,6 +224,47 @@ PRO6000 的 CUDA 与 NVML UUID 曾实际不同，直接把 NVML UUID 填入 `CUD
 
 ### 提交、观测与恢复
 
+### API短入口与代码交接
+
+2026-10-13区10的一次正式评测使用API成功创建并运行：省略`framework`和`project_id`，
+使用目录中的精确JOB镜像、单Worker八卡低优任务，原HTTP202取得operation，后续GET200核真实JOB，
+最终SUCCEEDED并完成项目自身模型与140场评测验收。请求入口264字符，以镜像内绝对Python
+执行`-c`解码4773B bootstrap；两个ENV分片为4096/2268字符，含控制参数共5个ENV。
+bootstrap仅下载229048B代码/证据闭包，部署到独占GPFS目录后exec实际脚本；大模型和数据在GPFS直接读。
+这是该配置的成功实证，不是所有镜像/资源区的保证；实验结果归使用方维护。
+
+在当前OpenAPI 3.8.0中，入口最多8192字符、ENV最多64个、每值最多4096字符。
+需要项目归属/项目付费/项目存储时仍显式选正确项目；个人任务可省略`project_id`。
+`framework`是兼容字段，新接入可省略，但任务内必须自行核对真实节点环境，不能把网页PyTorchJob
+选项或API默认映射当成启动编排已经相同。10月13日实见选择个人镜像后网页只有
+PyTorchJob/TFJob/MPIJob/RayJob；手填Custom会回到PyTorchJob，旧表单观察不能作当前填写指南。
+
+可选入口如下，按实际依赖选择一种：
+
+```sh
+/绝对解释器/python -B -s -u /已部署GPFS目录/run.py --本次参数
+```
+
+```sh
+/绝对解释器/python -B -s -u -c 'import base64,os;exec(base64.b64decode("".join(os.environ["BOOTSTRAP_B64_"+str(i)] for i in range(int(os.environ["BOOTSTRAP_PARTS"])))))'
+```
+
+分片按单值限制生成并完整解码核对；代码包较大时用当前官方文件源签发的短期GET或已有TOS客户端，
+完整核对字节后部署，签名URL只放私有配置。期限要覆盖实际启动，不能把过期URL重放进旧请求。
+路径、源码和镜像环境必须由本次任务实读；开发机系统盘文件不会自动出现在JOB中。
+
+HTTP502表示网关取得无效上游响应，不能直接诊断为命令过长、模型下载失败或训练崩溃。
+该实验旧API与网页创建均出现MAIN_INTENT/502且没有JOB；成功版本同时改变入口承载和提交路径，
+故尚未隔离旧失败的单一根因。大命令/ENV的假设应比较实际原body与成功样本：超公开限制曾明确返回
+400/invalid_training_input/before_dispatch；符合单字段限制也不证明厂商未公开的总量约束。
+原请求、key和响应保留，UNKNOWN只查原key，不自动重POST或换key。
+创建202、operation成功、JOB运行、持久产物和科学验收分别确认；“卡数预留已释放”仅逻辑台账。
+
+来源：[RFC9110 502](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6.3)、
+[原实验提交经验及证据](https://github.com/ArrebolBlack/se3-wam-research/blob/codex/history-eight-continue-epoch4/docs/experiments/DB0-TRAIN0/results/history_encoding_fresh_20261010/pro6000/continuation/rollout/submission-method.md)。
+
+### 按真实任务身份观察
+
 准备镜像依赖 → 小规模验证命令和持久输出 → 核对总 GPU、项目/个人额度、镜像与挂载 → 创建。
 帮助声明若提交提示“准备/结果待确认”，保留锁定配置并用“重试同一操作”，避免改名重复创建。
 “复制并重新配置”创建独立新任务，不改原任务；核对带入镜像、规格、Worker、项目、存储、命令和

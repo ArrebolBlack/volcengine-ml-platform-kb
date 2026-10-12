@@ -245,6 +245,9 @@ $Result.operation | Select-Object state,finalization_state,vendor,vendor_instanc
 单机多卡仍须真实 `torchrun` 或其他多卡入口，多机依 [DDP 说明](zenith-compute.md)验证，
 不能照搬火山 `MLP_*` 到其他厂商。API 上限 256 副本不代表当前容量/准入。
 新接入通常省略 `framework/image_vendor`；确需厂商 DDP 模式时单独核对兼容字段。
+短入口、ENV分片、GPFS脚本和官方对象交接的实证及长度/502边界见
+[API短入口与代码交接](zenith-compute.md#api短入口与代码交接)。个人任务可省略`project_id`；
+需要项目归属时显式填写，不能从某次省略成功推导项目字段会导致失败。
 不传 `max_runtime_seconds`、`storage_mode`、原生 `queue_id/flavor_id`。
 
 准入文件保存为 `$Private/admission-job.json`，参数与训练 body 一致；`__RESOURCE_ZONE__`
