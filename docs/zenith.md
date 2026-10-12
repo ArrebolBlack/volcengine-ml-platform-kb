@@ -13,6 +13,9 @@ Zenith 是 `http://10.1.130.101` 上的多云算力平台，具有独立账号�
 | 区 10 PFS、TOS、500 GiB 数据、镜像、数据集 | [数据与资产](zenith-data.md) |
 | API 字段、官方 CLI、Token、项目、卡时与角色 | [账户与 API](zenith-account-admin.md) |
 
+SE3-WAM 的新执行对话从项目 `docs/resources/zenith_workflow.md` 进入实际流程；
+该页串起现有实验、提交登记、连续训练、监控和结果验收，本库维护其中的平台共性。
+
 控制台：[总览](http://10.1.130.101/my)、[开发机](http://10.1.130.101/my/instances)、
 [任务](http://10.1.130.101/my/jobs)、[文件与存储](http://10.1.130.101/my/storage)、
 [组织与项目](http://10.1.130.101/my/organization)、[Token](http://10.1.130.101/api-tokens)。
@@ -21,9 +24,10 @@ Zenith 是 `http://10.1.130.101` 上的多云算力平台，具有独立账号�
 其他项目记录本库 checkout 路径、链接所需主题，并维护自己的镜像、命令、数据路径和结果。
 不要复制整套知识库。GPU Fleet 只读监控；启动看板不会创建资源，也不会给另一个终端自动配置凭据。
 
-## 2026-10-11 定向复核
+## 2026-10-12 定向复核
 
-匿名 [OpenAPI](http://10.1.130.101/pt/api/openapi.json) 与 capabilities 已为 **3.8.0**，仍为 60 个路径、63 个操作。
+本轮匿名 [OpenAPI](http://10.1.130.101/pt/api/openapi.json) 仍为 **3.8.0、60 个路径、63 个操作**；
+capabilities 的已验证版本来自 10 月 11 日查询，本轮没有调用个人 Token 或创建计算资源。
 相较 3.7.0，两类创建的 `bucket_mount_ids` 更新了新挂载点规则，旧挂载和已保存操作的路径保留；
 具体路径统一见[数据与资产](zenith-data.md#挂载权限与现有机器补挂)。未新增启停或改配字段。
 前次存储帮助的 `Last-Modified` 为 `2026-10-10 15:50:46 GMT`
@@ -32,8 +36,9 @@ Zenith 是 `http://10.1.130.101` 上的多云算力平台，具有独立账号�
 镜像目录当前允许每页最多 500 条，须按 `total` 读取完整目录；开发机存储模式新增 `auto`，
 训练契约仍不接受 `storage_mode`。项目 TOS/BOS 挂载目录与 `bucket_mount_ids`，以及登记盘和数据集
 的选择边界见[数据与资产](zenith-data.md#挂载权限与现有机器补挂)；查询步骤见[快速开始](zenith-quickstart.md)。
-本轮已用现有 Token 只读查询项目、授权盘、桶挂载候选、镜像目录并执行准入预检；
-未验收原生桶挂载、镜像拉取或训练创建。账号授权与瞬时容量由使用方项目记录。
+10 月 11 日已用现有 Token 只读查询项目、授权盘、桶挂载候选、镜像目录并执行准入预检；
+这轮只读查询本身不证明原生桶挂载、镜像拉取或训练创建；后续真实执行证据见下表。
+账号授权与瞬时容量由使用方项目记录。
 
 ## 2026-10-07 更新核查（历史）
 
@@ -91,10 +96,14 @@ SSH 私钥、公钥引导及首次可信主机确认仍需准备。
 | 2026-10-03 | Token 只读 API：本人资源、目录、项目、状态/日志/副本；GPU Fleet 只读集成 |
 | 2026-10-07 | 当前帮助、OpenAPI、capabilities、本人资源和目录的只读核查；新工具的验证范围见快速开始 |
 | 2026-10-10–11 | HTTP helper 已用于区 10 现有开发机启停、单/双卡改配和停机确认；新建请求经历厂商分配失败，没有运行成功；TOS 完整数据副本恢复及核验范围见 [SE3-WAM 项目资源文档](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/resources/volcengine_custom_tasks.md) |
+| 2026-10-11 | 区 10 个人镜像保存、目录登记和单卡 JOB 实际拉取；该 JOB 在继承 rank 环境检查处失败，取消回执及 FAILED 终态已确认。后续七组 JOB 使用同一镜像加独立源码/deps 实际训练，见项目资源文档，不等于镜像内 E-only 全功能验收。 |
+| 2026-10-11–12 | 区 5/10 JOB 原生训练、PFS checkpoint/日志读回、单机及多节点通信与部分完整状态恢复已有实证；具体拓扑、数值与科学验收范围见 [历史编码实验](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/experiments/DB0-TRAIN0/results/history_encoding_fresh_20261010/interruption-report.md)及[四臂部署](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/experiments/DB0-TRAIN0/results/object_reconstruction_late_fresh_20261011/pro6000/deployment.md)。 |
 
 10 月 3 日控制台任务没有可见日志/副本行；API 读取成功不等于已取得完整应用日志。
-上述已有机操作不证明 API 新建成功、实例重启、训练提交/取消或 CLI 写入已验收。
-低优免费记账与真实回收/重排、多节点 DDP、镜像构建、STS、原生桶挂载及大数据训练吞吐仍未验证。
+已有机操作不证明 API 新建开发机运行成功、实例 reboot 或官方 CLI 写入已验收。
+低优免费记账、真实回收重排及跨 allocation 精确恢复、其他厂商/未测拓扑、STS 和原生桶训练吞吐仍未验证。
+区 5 原生桶实际挂载和小块读取已有项目证据，不代表对象挂载具有完整 POSIX 替换语义；
+TOS 缓存/容量与长期吞吐的限制见[数据页](zenith-data.md)。
 真实实验在使用方的唯一主文档记命令和结果；本库不保存瞬时余卡、
 余额、排队状态或凭据。历史短任务不证明长训练稳定。
 
@@ -108,6 +117,8 @@ SSH 私钥、公钥引导及首次可信主机确认仍需准备。
 | 有余卡却排队 | 节点碎片、并发上限、低优份额、项目准入、镜像及存储 |
 | SSH 停启后失联 | 当前运行态、公钥注入、最新结构化端点，尤其百度动态端口 |
 | 有目录却找不到数据 | 用 `findmnt` 核对来源、资源区、用户卷；同路径不保证同存储 |
+| 单进程入口报告 DDP / CUDA 设备不可见 | 查继承的 rank 变量及 CUDA/NVML/EGL 设备身份，见[计算页](zenith-compute.md) |
+| 保存失败但 df 有空闲 | 查 Fileset/用户/组配额、写入身份与原始保存异常，见[数据页](zenith-data.md) |
 | 完成却无结果 | 真实退出、持久输出及指标；平台完成不等于科学验收 |
 
 ## 帮助原文路由

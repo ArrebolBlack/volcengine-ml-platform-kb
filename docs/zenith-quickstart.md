@@ -2,8 +2,12 @@
 
 适用于本项目或新项目的 **Python 3 + 个人 HTTP API + OpenSSH** 路线，不依赖官方 CLI 安装。
 使用 [zenith_api.py](../scripts/zenith_api.py)，先读参数和做查询，再执行所需分支。
-字段依据 2026-10-11 复核的 OpenAPI 3.8.0；[账户与 API](zenith-account-admin.md)解释完整权限，
+字段依据 2026-10-12 定向复核的 OpenAPI 3.8.0；[账户与 API](zenith-account-admin.md)解释完整权限，
 [计算页](zenith-compute.md)解释 DDP/回收，[数据页](zenith-data.md)解释持久路径和大数据。
+
+SE3-WAM 执行对话先读项目的 `docs/resources/zenith_workflow.md`，使用其现有提交适配器登记负责对话、
+逻辑 job 和 attempt 后再 POST。下文是通用 API 流程，直接执行本页 POST 示例不会自动进入项目 Fleet ledger。
+其他项目继续使用自己的记录入口，不复制 SE3-WAM 调度实现。
 
 ## 1. 一次性准备
 
@@ -204,7 +208,8 @@ Invoke-Zenith get "/pt/api/ai/jobs/$Vendor/$JobId/replicas?page=1&page_size=50"
 
 低优仅在授权接受抢占时选 `low_priority`，同时改准入文件，并确认当前 offering 支持。
 最新规则低优训练免费但可能份额回收；重新排队会重跑原命令，入口必须恢复已保存进度。
-本轮未实测低优免费记账和抢占恢复，不能把规则说明当吞吐或稳定性验收。
+低优免费记账与真实抢占后跨 allocation 恢复仍未验收；已有普通训练及同 allocation 的恢复证据
+不能替代这两项。正式训练是否有应用时限按项目当前授权和真实平台限制判断，不能复用旧诊断窗口。
 
 ## 4. 超时、恢复与结束
 
@@ -240,4 +245,6 @@ wait 后继续查资源终态。取消不删除 checkpoint；开发机内 `shutd
 一次直连准入请求超时，因准入没有远端副作用，手动重查成功；创建调用不能按这种方式换键重试。
 该次只读核查没有创建或启停资源。10 月 10–11 日随后完成的 HTTP helper 已有机启停、改配与数据恢复，
 以及新建失败的具体边界，见[实测证据](zenith.md#实测证据与剩余边界)和其链接的项目资源文档。
-API 新建成功、训练提交/取消、低优重排、多节点通信与大数据训练稳态读取仍未验收。
+10 月 11–12 日已有 HTTP API 训练创建/取消、个人镜像保存及 JOB 拉取、PFS 真实训练和多节点通信的
+项目实证，范围由[实测证据](zenith.md#实测证据与剩余边界)及所属实验维护。
+API 新建开发机运行成功、低优免费记账、真实抢占重排、跨 allocation 精确恢复及原生桶训练吞吐仍未验收。

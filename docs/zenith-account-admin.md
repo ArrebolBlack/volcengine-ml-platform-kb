@@ -2,7 +2,7 @@
 
 从[快速启动](zenith-quickstart.md)执行开发机或训练工作流；本页用于查权限、计费和 API 契约。
 2026-10-11 补核 OpenAPI 3.8.0 的 TOS/BOS 挂载点；存储、训练和项目帮助沿用前次核查，其余沿用 10 月 7 日。
-HTTP helper 的已有机启停、改配及新建失败边界见[实测证据](zenith.md#实测证据与剩余边界)；未覆盖的操作不能视为已验收。
+个人 HTTP API 的已有机启停、改配及区 10 训练创建、取消已有实测；开发机新建失败及其余边界见[实测证据](zenith.md#实测证据与剩余边界)。
 
 ## 权限与资源归属
 
@@ -153,16 +153,16 @@ CLI 写入与 STS 仍未实测；系统 SSH 的实测范围见下文。“未公
 | 工作 | 官方 `zenith` CLI | 个人 API / 其余路径 |
 |---|---|---|
 | 身份、额度、项目、规格、镜像目录、实例查询 | 已说明命令 | API 已公开；项目仅查询，镜像目录不等于资产管理；2026-10-03 已实测 capabilities、me/额度、项目、实例、任务和规格只读列表 |
-| 创建开发机、提交训练 | 帮助要求使用 HTTP API/生成客户端 | API 已公开，创建会启动/调度计算 |
+| 创建开发机、提交训练 | 帮助要求使用 HTTP API/生成客户端 | API 已公开；区 10 HTTP 训练创建已实际运行，开发机新建失败边界见实测证据；创建会启动/调度计算 |
 | 实例启动、停止、重启、同型号改配 | 已有，支持回执与有限效果核对 | API 已公开；停止不等于释放 |
-| 任务状态、日志、副本诊断、metrics、取消 | 取消命令已有；任务查询/日志/副本/metrics 仍规划中，使用 HTTP API | 当前公开 vendor 与 Platform-ID 两种寻址；本人任务详情/日志/副本及历史任务 metrics 请求已通过；取消回执成功后仍查终态 |
+| 任务状态、日志、副本诊断、metrics、取消 | 取消命令已有；任务查询/日志/副本/metrics 仍规划中，使用 HTTP API | vendor 与 Platform-ID 两种寻址已公开；读取和区 10 HTTP 取消已实测；日志/副本可为空，取消回执后仍查任务终态 |
 | 公钥管理、补注入、SSH 信息 | 已有 | API 已公开；不生成或提供私钥 |
-| 非交互机内命令、文件传输 | `ssh connect` 要求 TTY | 个人 API 不执行 shell/传文件；控制台端点 + 系统 SSH 命令已实测，API 取端点和文件传输仍待验收 |
+| 非交互机内命令、文件传输 | `ssh connect` 要求 TTY | 个人 API 不执行 shell/传文件；系统 SSH 命令、tar 流传输和区 10 停启复连已实测；SCP/SFTP/rsync 仍分别待验收 |
 | 平台训练事件、TensorBoard、产物下载、训练终端 | 未形成 CLI 工作流 | 事件、TensorBoard、产物下载无个人 API 端到端方案；训练终端仅总管理员控制台，不向本人任务提供 SSH |
 | 实例删除、重建、换镜像、任务记录删除 | 未公开对应命令 | 当前 schema 无这些个人端点；按角色和厂商能力用控制台 |
 | 已有资源手动挂载 | 明确不提供 | Token 禁止；控制台本人可改同区项目/公共挂载，个人盘与自定义路径由总管理员处理，见[数据页](zenith-data.md#挂载权限与现有机器补挂) |
 | 共享数据集、授权盘/桶挂载候选、对象源、签名 URL、STS | `storage sources/objects/upload-presign/download-presign/sts` 已说明；新增挂载候选的 CLI 覆盖未复核 | API 已公开，仍受 scope、项目授权和资源区限制 |
-| 镜像构建/登记/分享、模型、文件分享/迁移 | 未公开对应命令 | 个人 API 仍无这些资产管理写端点；按[数据与资产](zenith-data.md)使用有权入口 |
+| 镜像构建/登记/分享、模型、文件分享/迁移 | 未公开对应命令 | 个人 API 仍无这些资产管理写端点；区 10 页面保存个人镜像、自动登记及 JOB 拉取已实测，边界见[数据与资产](zenith-data.md#镜像资产和运行镜像) |
 | Token 创建/换发/撤销 | login/logout 只管理本地接入 | Token 不能管理 Token；用户菜单完成平台凭据引导 |
 | 项目/成员/组织/配额、推理等管理写入 | 未公开对应命令 | 当前 schema 无对应个人写入端点；控制台与管理员流程 |
 
@@ -371,6 +371,10 @@ schema 操作总述仍有“namespace flags 仅管理员”的旧句，与属性
 回执成功不等于运行、SSH可连或训练产物成功。取消发送 `{}` 并使用独立的取消键，
 需jobs:cancel、operations:read、jobs:read；个人 Token 只可取消本人任务，不能继承控制台项目管理权。
 未获任务ID时用创建操作ID取消，原创建状态不明仍须等待；取消保留记录、日志和存储。
+2026-10-11 区 10 实际创建的单卡 JOB 已运行指定个人镜像，取消回执成功后另查到 `FAILED` 与已填写的 `ended_at`；
+另一次创建在派发前取消，回执明确 `cancelled_before_dispatch` 且没有厂商 JOB。
+来源：[实际 JOB 取消](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/resources/volcengine_custom_tasks.md#按负责人授权继续保存)、
+[创建前取消](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/experiments/DB0-TRAIN0/results/object_reconstruction_late_fresh_20261011/pro6000/deployment.md#已关闭的八卡前置窗口)。
 这里只解释平台现有契约，不要求项目新建另一套回执或调度系统。
 
 解析响应时区分：操作查询包在 `operation`，开发机详情包在 `instance`，训练详情包在 `job`；
@@ -520,9 +524,11 @@ ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes -o Co
 随后执行 `nvidia-smi --query-gpu=name,memory.total --format=csv,noheader`，返回两张
 `NVIDIA RPBZZZ6`、每张 `97887 MiB`；控制台规格名为 PRO6000 × 2。只证明驱动可见设备，
 未证明 PyTorch/CUDA 运算、多卡通信或训练性能。实际挂载结果归[数据页](zenith-data.md)。
-尚未验收自动获取端点、SFTP/SCP 上传下载、远程失败退出处理和停止/启动后的连接恢复。
+该次检查未包含自动获取端点、SFTP/SCP 上传下载、远程失败退出处理和停止/启动后的连接恢复。
 
-共享持久目录可用于训练代码和输出交接，具体[日志与产物方案](zenith-compute.md)仍待验收。
+上述是 9 月 27 日首次检查的范围；区 10 停启后的系统 SSH 复连和 PFS 读回已于 10 月 3 日通过，
+真实训练日志、报告和 checkpoint 交接见[计算页](zenith-compute.md#训练创建ddp观察与重试)。
+文件传输已有 SSH tar 流证据，SFTP/SCP/rsync 的独立验收范围见[数据页](zenith-data.md#区-10-百度-pfs在开发机中使用)。
 SSH 只能操作已授权机内环境，不能补齐平台实例删除、手动挂载、Token 或管理员功能；
 机内 shutdown 不能当作 Zenith 释放资源。首次实测范围见[入口页](zenith.md)。
 

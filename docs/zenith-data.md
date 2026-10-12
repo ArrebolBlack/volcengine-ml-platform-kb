@@ -2,10 +2,10 @@
 
 启动命令见[快速启动](zenith-quickstart.md)，验证范围见 [Zenith](zenith.md)。2026-10-10 定向复核
 存储、镜像、训练及项目帮助；10 月 11 日补核 OpenAPI 3.8.0 的项目 TOS/BOS 挂载点规则，其余沿用 10 月 7 日核查。
-已有实测包括区 10 PFS 有界读写、SSH 样本传输、TOS
-公网下载，以及 10 月 3 日同一 PFS 的开发机停启保留和训练任务共享写入。
-对象源/数据集的个人 API 只读查询已通过；STS 签发、镜像登记/保存/拉取、手动补挂、共享数据集
-计算挂载和 500 GiB 训练 I/O 尚未验收，不能从接口存在推断已可用于正式训练。
+已有实测包括区 10 PFS 读写、SSH 样本传输、TOS 公网下载、开发机停启保留与真实训练共享输出，
+以及 10 月 11 日本人开发机镜像保存、个人镜像登记和单卡 JOB 实际拉取，具体边界见对应章节。
+对象源/数据集的个人 API 只读查询已通过；STS 签发、镜像秘密过滤、手动补挂、共享数据集
+计算挂载和全量远程对象训练 I/O 尚未验收，不能从接口存在或 PFS 训练成功推断这些路径可用。
 
 ## 复用已有火山数据与镜像
 
@@ -101,7 +101,7 @@ df -hT /personal_fast_storage /public_fast_storage
 换了容器主机名但从同一 `gpfs` 源读回 `ok`，随后清理测试文件。这已实测同一 PFS 的停启保留和训练任务
 共享写入；仍未替代 500 GiB 连续吞吐、并发读取或长任务恢复基准。
 
-确认挂载后，可在个人目录按项目组织文件。以下为建议布局，**尚未执行**；`my-project` 替换为项目名：
+确认挂载后，可在个人目录按项目组织文件。以下为占位布局；`my-project` 替换为项目名：
 
 ```bash
 mkdir -p /personal_fast_storage/projects/my-project/{code,data,outputs,envs}
@@ -118,12 +118,20 @@ HDF5 样本从火山机传入个人 PFS 并成功读取；SCP/SFTP/rsync 命令�
 百度另有[将 Conda 和 Pip 包持久化存储至 PFS](https://cloud.baidu.com/doc/AIHC/s/umjqs7rgi)说明。
 将其示例挂载点换成本机真实 PFS 路径；环境复用需相同挂载绝对路径、相同架构及兼容的系统依赖，
 并核对新镜像包含 Bash/glibc。仅把代码放入 PFS，不会自动把根盘里已有的 Conda/Pip 环境迁进去。
-本库尚未在区 10 安装或迁移环境，不将官方示例当作已完成配置。
+区 10 已有持久目录环境和独立系统盘 Python/venv 的真实准备记录，见[环境与镜像实测](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/resources/volcengine_custom_tasks.md#按负责人授权继续保存)。
+具体解释器、源码、额外依赖及资产由项目维护；镜像内安装包与运行时显式选择的 PFS 源码/deps 应分别核对。
 
 PFS 的用途包含持久化和多计算环境共享；换机或任务复用时仍须挂到**同一 PFS 源目录/Fileset**。
 同名路径、同资源区或同用户不足以替代源目录核对；本账号同一 PFS 的停启保留和任务共享已于 10 月 3 日验证，
 不同池换机、删除/重建及长期恢复不在该证据范围内。
 区 10 与火山区 5 的个人/公共路径不自动互通。
+
+`df`/`statvfs` 的全局空闲字节和 inode 不代表 Fileset、用户或组仍有配额。
+区 10 真实训练曾在 `torch.save` 报 `EDQUOT`，即使挂载视角仍有空闲也不能排除配额耗尽。
+定位实际挂载源、写入身份、字节/文件数限制和存储侧用量；`/me/quota-usage` 是计算配额，不能用于推算 PFS 可写量。
+清理仅限已确认可重取且不再被运行或恢复使用的缓存；完整 checkpoint 须通过实际写入、flush/fsync 与原子替换，
+不能把存在文件或日志步数当作保存成功。来源：[配额诊断](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/resources/volcengine_custom_tasks.md#2026-10-12公共存储配额与-cpu-引导诊断)、
+[真实保存失败](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/experiments/DB0-TRAIN0/results/history_encoding_fresh_20261010/interruption-report.md#2026-10-12-八卡续训-checkpoint-配额写入失败)。
 
 来源：[存储](http://10.1.130.101/help/data/storage.html)、
 [换机与存储迁移](http://10.1.130.101/help/data/storage-migration.html)。
@@ -319,7 +327,9 @@ Fileset 管理（管理员）：资源 → 快速存储 → 区 5 → Fileset �
 
 打开 [镜像](http://10.1.130.101/my/images)，先选资源区。当前按个人、项目、平台镜像展示，
 **同一镜像地址在不同资源区须分别登记并启用**，包括路由默认镜像。原有云镜像目录可见不等于已登记。
-2026-09-27 曾实见火山 CR 仓库目录；截至本次没有执行登记、保存或拉取，新流程是帮助说明。
+2026-10-11 已由官方页面保存本人区 10 开发机，确认成功加入个人镜像；单卡和八卡 JOB 目录返回同一登记 ID，
+随后单卡 JOB 实际拉取并运行其中的独立解释器及包检查。
+来源：[保存、登记与首次拉取](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/resources/volcengine_custom_tasks.md#按负责人授权继续保存)。
 
 | 操作 | 方法与注意事项 |
 |---|---|
@@ -336,10 +346,15 @@ Fileset 管理（管理员）：资源 → 快速存储 → 区 5 → Fileset �
 保存期间不要停止、重启或修改环境；“结果待确认”先等平台核对，不重复提交。保存的是软件环境，
 **不包含挂载盘数据**；镜像保存成功与个人登记成功是两个结果。新镜像仍需做启动和最小负载检查。
 
+上述单卡检查在 GPU 模型执行前因继承 rank 变量失败，完整新镜像 DDP smoke 尚未因此通过，
+入口修复见[计算页](zenith-compute.md#入口环境与设备身份)。同镜像后续承载的七组正式训练显式使用独立 PFS 源码/deps，
+不能据此声称镜像内 E 包完整功能已验收。来源：[正式训练环境](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/resources/volcengine_custom_tasks.md#2026-10-11七组历史编码在-pro6000-正式启动)。
+
 2026-10-11 补核：当前帮助未说明自动排除系统盘凭据、SSH 主机私钥、Jupyter/code-server 认证文件
 或容器 `Config.Env`；百度[镜像制作 API](https://cloud.baidu.com/doc/AIHC/s/rmbkpkt4x)
-也未提供文件或环境变量排除参数。“不包含挂载盘”不能用来证明这些内容已过滤，临时移走文件
-也不能证明容器环境变量不被保存。含秘密的现有机需要先确认实际保存边界；另一条官方路线是按
+也未提供文件或环境变量排除参数。此次负责人明确接受未排除文件和环境变量后完成保存；
+成功不证明秘密过滤、底层仓库公开/私有 ACL 或其他厂商保存行为。“不包含挂载盘”不能证明这些内容已过滤，
+临时移走文件也不能证明容器环境变量不被保存。后续保存仍需按实际边界和已有授权选择；另一条官方路线是按
 [Dockerfile 使用 Podman 构建](https://cloud.baidu.com/doc/AIHC/s/fm8ch1qjj)，仅纳入指定软件文件，
 再推送已授权仓库。该路线仍分别需要构建能力、推送权限和目标计算池拉取权限，不能据命令存在宣称可用。
 
@@ -418,7 +433,7 @@ HTTP 下复制可能失败，若页面提供全选文本框可手动复制；不
 | 火山 | MLP 预付队列 + vePFS；TOS 现金口径未知时不能当免费；系统盘扩容仅总管理员，本人可按授权调整项目/公共挂载 |
 | 天翼 | BC 专属池预付；系统盘非持久，科研卷创建后可能需厂商控制台挂载，项目隔离挂载未开放 |
 | 无问 | 项目池 RESERVED 与包内子卷；高性能/容量层为 POSIX，不能当对象桶；池授权、地区/卷均需相符 |
-| 区 10 | 百度百舸（`baidu`），使用 `resource_zone: "10"`；已验证个人/公共 GPFS 有界读写、TOS 公网读取及同一 PFS 停启保留/任务共享；大数据训练、跨池及删除/重建生命周期未验收 |
+| 区 10 | 百度百舸（`baidu`），使用 `resource_zone: "10"`；已验证 GPFS 读写、TOS 公网读取、同一 PFS 停启保留及真实训练/恢复；全量 TOS 远程训练 I/O、跨池及删除/重建生命周期未验收 |
 
 来源：[厂商差异](http://10.1.130.101/help/reference/vendors.html)。原帮助阿里产品线未锁定，
 不能将区 10 映射为阿里；厂商枚举存在也不表示当前账号已获可用规格或购买权限。

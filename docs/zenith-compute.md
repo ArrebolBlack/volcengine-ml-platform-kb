@@ -3,8 +3,9 @@
 可执行命令见 [快速开始](zenith-quickstart.md)，实测边界见 [Zenith](zenith.md)。
 2026-10-07 已复核当前帮助与 OpenAPI 3.1.0；下文旧表单观察仅作历史说明。
 区 10 单卡控制台任务、开发机停启、SSH 复连及 PFS 持久性已于 10 月 3 日验收；
-HTTP helper 的已有机启停、改配与新建失败边界见[实测证据](zenith.md#实测证据与剩余边界)；
-2026-10-11 已验证区 10 个人 API 提交及两节点 DDP，契约见下文；份额回收及抢占恢复仍未因此验收。
+个人 HTTP API 的已有机启停、改配及区 10 训练提交、取消已有实测；开发机新建失败边界见[实测证据](zenith.md#实测证据与剩余边界)。
+2026-10-11 已验证区 10 两节点 DDP、PFS 保存和同次分配内严格恢复，契约及证据见下文；份额回收和跨分配抢占恢复仍未因此验收。
+SE3-WAM 的实验、资源与提交入口由研究仓库 `docs/resources/zenith_workflow.md` 维护。
 
 ## 开发机：创建到运行
 
@@ -208,10 +209,30 @@ exec torchrun --nnodes="$node_count" --nproc-per-node="$local_gpus" \
 或跨分配抢占恢复；地址、端口和网络设备名不应写死。
 变量语义与[百度 AIHC 官方环境变量说明](https://cloud.baidu.com/doc/AIHC/s/mm346i20k)一致。
 
+### 入口环境与设备身份
+
+单进程诊断也可能继承 `RANK/LOCAL_RANK/WORLD_SIZE`。一次区 10 镜像 JOB 已实际拉取并运行解释器，
+随后因入口把“存在任意 rank 变量”当作 DDP 而在模型执行前失败。先记录变量和实际启动拓扑；
+单进程子环境显式清除继承的 rank 变量，DDP 则先保存平台节点契约，再由 `torchrun` 注入进程级变量。
+不能在多节点入口读契约前清空，也不能从这次失败推断镜像拉取失败。
+来源：[镜像 JOB 失败及候选修复](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/resources/volcengine_custom_tasks.md#按负责人授权继续保存)。
+
+PRO6000 的 CUDA 与 NVML UUID 曾实际不同，直接把 NVML UUID 填入 `CUDA_VISIBLE_DEVICES` 会使 CUDA 不可见。
+按本次分配的 PCI 地址对应 CUDA ordinal、NVML 身份与 EGL 设备，再核对实际 compute/graphics PID；
+不要复用旧机 UUID、EGL 序号或另一厂商的 CUDA compat/NCCL 参数。
+来源：[设备映射实测](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/resources/zenith_pro6000_2x_dev.md#cudaegl-与-nvml-的身份差异)。
+
+### 提交、观测与恢复
+
 准备镜像依赖 → 小规模验证命令和持久输出 → 核对总 GPU、项目/个人额度、镜像与挂载 → 创建。
 帮助声明若提交提示“准备/结果待确认”，保留锁定配置并用“重试同一操作”，避免改名重复创建。
 “复制并重新配置”创建独立新任务，不改原任务；核对带入镜像、规格、Worker、项目、存储、命令和
 环境变量。旧任务缺真实配置时需补填，失效挂载不能静默丢弃；他人项目任务可见不等于可复制原始配置。
+
+正式训练的目标和停止条件由实验授权确定。SE3-WAM 已取消健康连续训练入口的人工六小时硬截止：
+同一 JOB 按获准 epoch 完成训练、验证和保存，真实抢占或已查证的厂商硬上限另行处理。
+这不取消短诊断、恢复检查、报告读取和 helper 请求/回执等待的有限超时；编辑磁盘文件也不会改变旧进程已绑定的截止。
+来源：[连续训练策略](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/resources/volcengine_custom_tasks.md#2026-10-12连续训练路线比较与提交登记)。
 
 普通任务页按状态过滤、分页、刷新，按 Zenith 记录的创建者/项目与厂商任务 ID 确定范围，不按名称认领。
 详情看状态/退出原因、角色/副本、运行实例、监控快照、实时日志、事件/TensorBoard 能力及厂商入口。
@@ -226,9 +247,9 @@ exec torchrun --nnodes="$node_count" --nproc-per-node="$local_gpus" \
 2026-10-12 复核匿名 OpenAPI 3.8.0：本人训练日志与副本读取使用
 `/pt/api/ai/jobs/{vendor}/{jobId}/logs`、`/replicas`，或 `/pt/api/ai/jobs/by-id/{id}` 下对应路径；
 仍没有把事件、TensorBoard 或产物下载变成已验收的个人自动化闭环。CLI 任务查询/日志/副本命令仍规划中。
-命令行自动化可由训练入口将
-stdout/stderr、退出结果和产物写入已验证的持久目录，再由挂同一卷的本人开发机取回；
-持久输出的区 10 单卡路径已有下述证据，但完整日志交接仍待实测，不能在任务未启动时提供调度错误日志。
+训练入口将 stdout/stderr、退出结果和产物写入已验证的持久目录，再由挂同一卷的有权开发机读取。
+区 10 已读回真实训练日志、报告与 checkpoint；应用 PFS 文件交接不等于平台事件、TensorBoard 或产物下载接口验收，
+任务未启动时也不会产生应用日志。无需仅为读取小报告再申请 GPU JOB。
 指标通过 `/pt/api/ai/jobs/{vendor}/{jobId}/metrics` 或 by-id 对应路径读取，需 `jobs:read`。
 训练终端仅总管理员可用，任务本人/项目管理员及个人 Token 均无训练终端权；不能把开发机 SSH 套到副本上。
 任务 ID 不能作为开发机 ID 用于 SSH；非交互连接方法见[API/CLI](zenith-account-admin.md)。
@@ -236,14 +257,21 @@ stdout/stderr、退出结果和产物写入已验证的持久目录，再由挂�
 2026-10-12 实查区 10 百度多节点任务：PFS 原生训练记录持续推进，而 vendor 与 by-id 两组官方日志接口
 均返回 HTTP 200、`returned=0`、`pending=true`、`next_cursor=null`，副本数均为 0。by-id 使用同一厂商
 适配器，不能绕过该观测缺口；空日志或空副本列表不能判定训练未运行。
-只读比对收据见[本机证据](C:/workspace/se3-wam-research/local_private/zenith-logs-projection-20261012/comparison-summary.json)；
-具体训练进度与验收归研究仓库。本次未修改云端任务，也未验收上游日志修复。
+只读观察路径见研究仓库 `docs/resources/zenith_workflow.md`，
+PFS 读回及严格恢复证据见[四臂执行记录](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/experiments/DB0-TRAIN0/results/object_reconstruction_late_fresh_20261011/pro6000/deployment.md)。
+具体训练进度与验收归研究仓库；尚未验收上游日志修复。
 
 维护者应核对百度 v2 [DescribeJob](https://cloud.baidu.com/doc/AIHC/s/Kmayvejf0) 的 `needDetail=true`：
 该条件才返回 `pods/historyPods`，任务列表不含这些副本详情；
 [DescribeJobLogs](https://cloud.baidu.com/doc/AIHC/s/Hmayvkw26) 要求真实 `podName`，并须核对任务对应的
 `resourcePoolId/queueID` 与 v2 路由，响应日志及分页字段为 `logs/nextMarker`。
 这些是官方接口规定的定向排查点，尚非已查明根因；不得猜测 Pod 名称、私有路由，或据此重建健康训练。
+
+低优重排只会重启命令，恢复由项目入口完成：读取本组完整 checkpoint，保留模型、优化器、scheduler、
+采样进度和各 rank RNG；已有启动记录却没有有效保存点时显式失败，不能悄悄 fresh。
+区 10 四臂已在同次 world8/world16 分配中完成真实更新、PFS 保存与严格恢复的完整状态逐值比对；
+这不证明跨分配抢占后的精确轨迹。恢复后仍须检查新保存点和自然终态，日志更新数不能代替已保存步数。
+来源：[恢复验收边界](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/experiments/DB0-TRAIN0/results/object_reconstruction_late_fresh_20261011/pro6000/deployment.md)。
 
 2026-10-03 已实测一次最小闭环：页面选择 `PRO6000`、1 卡、资源区 10、标准、个人任务，默认
 `aibox-pytorch:v1.0-torch2.7.1-cu12.8` 与 `PyTorchJob`；入口命令只检查 CUDA/挂载并写入
