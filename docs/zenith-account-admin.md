@@ -172,7 +172,7 @@ CLI 写入与 STS 仍未实测；系统 SSH 的实测范围见下文。“未公
 `GET /pt/api/ai/capabilities`，返回 `api_version=3.0.0`、7 个资源区和 5 个厂商；随后按返回 ID 读取本人项目、实例、任务、规格、额度、卡时、授权对象源和数据集。结果摘要：项目 0 个；实例 1 个（百度、停止、2 GPU、非 stale）；任务 1 个（百度、已完成）；计算规格 8 个；授权对象源 1 个；共享数据集 3 个。实例与任务详情、任务日志和副本诊断的只读请求均成功。
 
 该次读取说明个人 Token、分页和当前 HTTP origin 在本账号可用，但不证明写 scope、STS、低优调度或实际容量。
-GPU Fleet 适配器从进程环境变量 `ZENITH_API_TOKEN` 读取；启动器可从 Git 忽略的本机受限文件恢复该变量。
+该次使用方项目的 GPU Fleet 适配器从进程环境变量 `ZENITH_API_TOKEN` 读取；其启动器可从 Git 忽略的本机受限文件恢复该变量。
 Token 不进入共享代码、文档、JSON 响应或浏览器页面；本机启动说明由使用方项目维护。
 
 Codex 可以在已授予的执行、网络及凭据权限内调用 CLI、HTTP 客户端和 OpenSSH；
@@ -182,9 +182,10 @@ Codex 可以在已授予的执行、网络及凭据权限内调用 CLI、HTTP �
 
 ### 接入条件与 Token
 
-本环境由用户指定 `http://10.1.130.101`，2026-10-03 的 Bearer 只读请求已成功，不能再标记为
-“Bearer 未实测”。官方 CLI 要求受信任的 **HTTPS origin（不带路径）**；本环境 HTTPS origin 和
-CLI 接入仍未验收，不猜 `https://10.1.130.101` 或绕过证书。当前 Windows 自动化优先走
+每个用户先向自己的部署管理员确认 origin，不默认继承本库的历史地址或作者账号。
+历史验证环境由用户指定 `http://10.1.130.101`，2026-10-03 Bearer 只读请求已成功。
+官方 CLI 要求受信任的 **HTTPS origin（不带路径）**；该历史环境的 HTTPS origin 和
+CLI 接入仍未验收，不猜 `https://10.1.130.101` 或绕过证书。跨平台接入可先走
 [快速启动中的 HTTP 工具](zenith-quickstart.md)，不依赖 CLI 安装。
 官方帮助已链接 [bjzgcai/Zenith](https://github.com/bjzgcai/Zenith) 的 CLI/Skills 安装资料；
 从有权限的 `cli-v<版本>` Release 取得配套包，不从同名 npm 包猜安装来源。

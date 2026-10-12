@@ -1,59 +1,106 @@
 # Zenith 可执行快速开始
 
-适用于本项目或新项目的 **Python 3 + 个人 HTTP API + OpenSSH** 路线，不依赖官方 CLI 安装。
+适用于 Zenith 用户自己的项目，采用 **Python 3 + 个人 HTTP API + OpenSSH** 路线，不依赖官方 CLI 安装。
 使用 [zenith_api.py](../scripts/zenith_api.py)，先读参数和做查询，再执行所需分支。
 字段依据 2026-10-12 定向复核的 OpenAPI 3.8.0；[账户与 API](zenith-account-admin.md)解释完整权限，
 [计算页](zenith-compute.md)解释 DDP/回收，[数据页](zenith-data.md)解释持久路径和大数据。
 
-SE3-WAM 执行对话先读项目的 `docs/resources/zenith_workflow.md`，使用其现有提交适配器登记负责对话、
-逻辑 job 和 attempt 后再 POST。下文是通用 API 流程，直接执行本页 POST 示例不会自动进入项目 Fleet ledger。
-其他项目继续使用自己的记录入口，不复制 SE3-WAM 调度实现。
+首次接入只执行第 1、2 节。第 3 节会创建或启停计算资源，按自己的任务授权选择一个分支；
+本库不提供账号或项目默认值，也不要求安装 SE3-WAM、GPU Fleet 或其他项目的调度工具。
 
 ## 1. 一次性准备
 
-需要：能访问平台的网络、有效个人 Token、Python 3、一个已忽略的本机私密目录。
+需要：能访问自己平台部署的网络、有效个人 Token、Python 3.9+、一个本机私密目录。
 使用 SSH 还需 OpenSSH、已登记公钥和匹配私钥。Token 不是 SSH 密钥；平台 Cookie 也不能当 Token。
-创建需相应 `instances:create` 或 `jobs:create`，查询/恢复需目录、资源、`operations:read` 等 scope。
-已有 Token 可在控制台调整适用范围；每次以 capabilities 返回值为准，不在文档或命令行写明文。
+本工具只用 Python 标准库。先在本人控制台的用户菜单 → API Token 创建个人凭据；
+第 2 节查询需 `profile:read`、`projects:read`、`catalog:read`、`instances:read`，
+后续任务/回执需 `jobs:read`、`operations:read`。只启用本次所需权限，具体 scope 见[账户页](zenith-account-admin.md#查询和写接口)。
+创建或启停时再核对相应写 scope；已有 Token 可在控制台调整适用范围，以本人的 capabilities 为准。
 
-下面命令在 **PowerShell** 执行；路径由接入项目一次性填写。Linux/macOS 可直接调用同一 Python 脚本，
-通过安全环境注入 `ZENITH_API_TOKEN`，API 参数和 JSON 不变。
+SSH 公钥在本人控制台的 SSH 密钥入口登记；只上传 `.pub`，私钥留在本机，不传给平台或聊天。
+有自己的密钥则复用；没有时用 `ssh-keygen -t ed25519 -f <本机未使用的私钥路径>` 交互创建，
+不要覆盖已有密钥。加密私钥供非交互使用时先用 `ssh-add <本人私钥路径>` 加入本机 agent，
+不要为了自动化取消口令。登记公钥不证明旧开发机已经注入，连接前仍需查询或在控制台核对。
+
+### 本人端点与凭据
+
+向部署管理员取得 origin，例如 `https://zenith.example.org`（示意地址，不可直接使用），
+包含协议、主机和可选端口，不带 `/my`、`/pt/api` 等路径。本库历史验证地址是 `http://10.1.130.101`，
+不是所有部署的默认值。HTTPS 使用受信任证书；只有部署明确允许且网络可信时才使用 HTTP，不绕过 TLS 校验。
+
+凭据文件默认放在本库已忽略的 `local_private/zenith.env`。克隆用户先在知识库根目录运行
+`git check-ignore local_private/zenith.env`，应返回该路径；ZIP 用户不运行 Git 命令，
+以后纳入 Git 时先确认同样的忽略规则生效。不要靠忽略规则保护已经跟踪的秘密。
+
+创建 `local_private/`，将根目录 [.env.example](../.env.example) 作为 `zenith.env` 的起点，
+用本机编辑器把占位符替换为**本人** Token；已有个人配置则直接使用其绝对路径，不覆盖它。
+文件严格只有一行 `ZENITH_API_TOKEN=<真实值>`，不加引号、注释、`export`、空行或第二个变量。
+工具不自动加载 `.env`；需显式 `--token-file`。不要展示文件、把真实值写进命令历史或提交到 Git。
+限制文件为当前用户可读；Linux/macOS 使用 `chmod 600 <凭据文件>`，Windows 按本机 ACL 限制访问。
+
+也可由系统凭据库安全注入环境变量 `ZENITH_API_TOKEN`；非空环境值优先于文件。
+旧环境值会遮蔽新文件，401 时检查其是否存在，但不要打印值。同一用户可跨项目复用自己的授权来源，
+不同用户必须使用各自凭据。`ZENITH_BASE_URL` 也可提供 origin，但以下示例显式传参以避免地址混淆。
+
+默认沿用本机代理配置。只有确认内网可直连时才在下列参数数组后追加 `--direct`：
+PowerShell 用 `$ZArgs += '--direct'`，Bash 用 `Z_ARGS+=(--direct)`，在任何请求前设置。
+历史工作机曾因默认代理超时而直连成功，这不是其他用户的网络默认值；必须经代理接入时不要追加。
+全局选项放在 `schema/get/post/wait` **之前**；官方 CLI 的 HTTPS profile 要求另见账户页。
+
+### PowerShell 会话
+
+在含 README 的知识库根目录执行，先把 origin 占位符改成自己的地址；非默认凭据路径也在此修改：
 
 ```powershell
-$KB = 'C:\workspace\volcengine-ml-platform-kb' # 其他机器改为实际 checkout
-$ProjectRoot = 'C:\workspace\se3-wam-research' # 其他项目改这里
-$Private = Join-Path $ProjectRoot 'local_private'
+$KB = (Get-Location).Path
+$ZenithOrigin = '<本人部署的 HTTP(S) origin>'
+$Private = Join-Path $KB 'local_private'
+New-Item -ItemType Directory -Path $Private -Force | Out-Null
 $TokenFile = Join-Path $Private 'zenith.env'
 $Z = Join-Path $KB 'scripts/zenith_api.py'
-$ZArgs = @('--base-url','http://10.1.130.101','--token-file',$TokenFile,'--direct')
+$ZArgs = @('--base-url',$ZenithOrigin,'--token-file',$TokenFile)
 function Invoke-Zenith {
     & python $Z @ZArgs @args
     if ($LASTEXITCODE -ne 0) { throw 'Zenith request failed; inspect response and retain original operation key.' }
 }
 ```
 
-此工作机已有 `local_private/zenith.env`，格式为一行 `ZENITH_API_TOKEN=<真实值>`，仅当前用户可读，
-不需要再次导出。其他项目可将 `$TokenFile` 指向这个已授权绝对路径，**无需复制秘密**；
-换机器则在当地私密配置中准备。新位置先用 `git check-ignore <路径>` 确认忽略，
-限制本机文件访问。也可安全注入环境变量；非空 `ZENITH_API_TOKEN` 优先于文件，失效时先检查是否被旧环境值覆盖。
+### Linux / macOS 会话
 
-`--direct` 明确绕过 HTTP 代理：本机默认请求曾超时，直连已成功。只在内网直连成立时使用；
-必须经代理接入的机器省略它，不要改全局网络配置。当前用户授权的部署地址为上述 HTTP origin；
-官方 CLI 的 HTTPS profile 要求另见账户页，不猜域名、不跳过 TLS 校验。
+在知识库根目录使用 Bash；先按上文准备本人的凭据文件：
+
+```bash
+KB="$PWD"
+ZENITH_ORIGIN='<本人部署的 HTTP(S) origin>'
+PRIVATE="$KB/local_private"
+mkdir -p "$PRIVATE"
+TOKEN_FILE="$PRIVATE/zenith.env"
+chmod 600 "$TOKEN_FILE"
+Z_ARGS=(--base-url "$ZENITH_ORIGIN" --token-file "$TOKEN_FILE")
+zenith_api() { python3 "$KB/scripts/zenith_api.py" "${Z_ARGS[@]}" "$@"; }
+zenith_api schema
+zenith_api get /pt/api/ai/capabilities
+zenith_api get /pt/api/me
+zenith_api get /pt/api/compute-offerings
+```
+
+后续 PowerShell 示例的 `Invoke-Zenith ...` 对应 Bash 的 `zenith_api ...`；
+JSON 和 API 字段相同，变量、JSON 解析及文件操作须按本机 shell 改写，不把 PowerShell 整段粘贴到 Bash。
 
 ## 2. 查询一次，选择真实参数
 
 ```powershell
 $Schema = Invoke-Zenith schema | ConvertFrom-Json
+$Schema.info.version
 $Caps = Invoke-Zenith get /pt/api/ai/capabilities | ConvertFrom-Json
 $Caps.api_version
 $Caps.scopes
 $Caps.job_submission
 $Caps.resource_zones | Format-Table
+$Me = Invoke-Zenith get /pt/api/me | ConvertFrom-Json
+$Me
 $Projects = Invoke-Zenith get /pt/api/projects | ConvertFrom-Json
 $Projects.projects | Select-Object id,name
-Invoke-Zenith get /pt/api/me/mount-disks
-Invoke-Zenith get /pt/api/me/bucket-mounts
 $Catalog = Invoke-Zenith get /pt/api/compute-offerings | ConvertFrom-Json
 $Catalog.offerings | Select-Object id,name,gpu_count,available,job_available
 Invoke-Zenith get /pt/api/me/quota-usage
@@ -61,6 +108,14 @@ Invoke-Zenith get /pt/api/me/card-hours
 $Instances = Invoke-Zenith get '/pt/api/ai/instances?page=1&page_size=100' | ConvertFrom-Json
 $Instances.instances | Select-Object id,vendor,vendor_instance_id,name,status,stale,last_seen_at
 ```
+
+`schema` 匿名读取，不加载或发送 Token；成功只说明接口可达，不说明认证成功。
+确认 `info.version` 与 `capabilities.api_version`，本人资料与控制台身份一致、所需 scope 存在；
+返回 2xx 不代表拥有写权限或已获容量。401 查有效期、文件和旧环境变量，403 查对应 scope/所有权，
+网络失败查 origin、VPN/内网路由与代理，禁止换用别人的凭据。
+
+需要挂载时另查 `get /pt/api/me/mount-disks` 和 `get /pt/api/me/bucket-mounts`（需 `storage:read`），
+不要为首次验证强制申请不需要的存储权限。
 
 列表超过一页按返回 total/page/page_size 继续；当前镜像 HTTP 接口也返回准确匹配 total，
 按其翻页。旧服务器若缺 total 才保留完整性未知，不把一页当全目录。
@@ -99,6 +154,8 @@ $ImageRows | Select-Object image_id,name,resource_zone,vendor
 
 ## 3A. 已有开发机：启动与连接
 
+本分支取 SSH 端点需 `ssh:read`，查看公钥/注入状态需 `ssh-keys:read`；
+启动还需 `instances:start` 和回执查询权限，不因只读接入成功就假定具备这些 scope。
 若实例已 RUNNING，直接查询详情/SSH，不重复启动。STOPPED 实例按同一行的厂商与 ID：
 
 ```powershell
@@ -117,11 +174,22 @@ $Ssh = Invoke-Zenith get "/pt/api/instances/$Vendor/$InstanceId/ssh-access" | Co
 ```
 
 确认新观测为 RUNNING、非 stale，公钥已注入。SSH 信息是结构化 `host/port/user/proxy_hops`，
-端点和跳板需本地可达；有跳板时按实际路由配置，不能套直连。主机信任需已通过可信渠道建立。
-直连非交互检查：
+端点和跳板需本地可达；有跳板时按实际路由配置，不能套直连。
+
+首次连接新目标时，先通过管理员等独立可信渠道取得**服务器主机密钥**指纹，不是本人的公钥指纹。
+由本人在终端交互连接，比对 SSH 提示的指纹；只有一致才接受并写入本机 `known_hosts`。
+没有可信指纹或原主机密钥变化时先核实，不自动信任 `ssh-keyscan` 结果、不删除旧记录绕过告警。
+直连示例（有跳板需先核对每一跳的主机身份和认证）：
 
 ```powershell
 $Key = '<本机已有私钥绝对路径>'
+ssh -o StrictHostKeyChecking=ask -o IdentitiesOnly=yes -o ConnectTimeout=10 -i $Key -p $Ssh.port "$($Ssh.user)@$($Ssh.host)" 'hostname && id'
+if ($LASTEXITCODE -ne 0) { throw 'Initial SSH verification failed' }
+```
+
+已建立信任且私钥/agent 可用后，再执行 Codex 的严格非交互检查：
+
+```powershell
 ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes -o ConnectTimeout=10 -i $Key -p $Ssh.port "$($Ssh.user)@$($Ssh.host)" 'hostname && id'
 if ($LASTEXITCODE -ne 0) { throw 'SSH verification failed' }
 ```
@@ -136,10 +204,11 @@ if ($LASTEXITCODE -ne 0) { throw 'SSH verification failed' }
 `__...__`：名称、资源区、精确镜像。默认个人付费；需要项目归属/项目付费时按账户页显式填写。
 `storage_mode=personal` 只适合已支持个人持久盘的区；不要为了通过准入擅自改成无个人盘模式。
 
-准入文件使用**同一**资源区、优先级、项目关系和存储模式，例：
+准入文件使用**同一**资源区、优先级、项目关系和存储模式；将下例的 `__RESOURCE_ZONE__`
+替换为本人所选 offering 的 `$ResourceZone`，并按实际情况修改其他字段：
 
 ```json
-{"workload_type":"instance","resource_zone":"10","execution_class":"standard","storage_mode":"personal"}
+{"workload_type":"instance","resource_zone":"__RESOURCE_ZONE__","execution_class":"standard","storage_mode":"personal"}
 ```
 
 将该 JSON 保存为 `$Private/admission-dev.json`，按实际选择修改后查询：
@@ -178,10 +247,11 @@ $Result.operation | Select-Object state,finalization_state,vendor,vendor_instanc
 新接入通常省略 `framework/image_vendor`；确需厂商 DDP 模式时单独核对兼容字段。
 不传 `max_runtime_seconds`、`storage_mode`、原生 `queue_id/flavor_id`。
 
-准入文件保存为 `$Private/admission-job.json`，参数与训练 body 一致：
+准入文件保存为 `$Private/admission-job.json`，参数与训练 body 一致；`__RESOURCE_ZONE__`
+替换为本次训练 offering 的 `$ResourceZone`，项目、优先级和副本数按实际提交填写：
 
 ```json
-{"workload_type":"job","resource_zone":"10","execution_class":"standard","replicas":1}
+{"workload_type":"job","resource_zone":"__RESOURCE_ZONE__","execution_class":"standard","replicas":1}
 ```
 
 ```powershell
@@ -238,6 +308,11 @@ wait 后继续查资源终态。取消不删除 checkpoint；开发机内 `shutd
 成功分五层：**准入允许 → 操作成功 → 资源运行 → 机内环境/挂载正确 → 持久产物及指标正确**。
 保存该项目的实际 body（不含秘密）、key 文件位置、operation/resource ID、运行命令和结果，
 放在项目已有的实验记录中；不另建调度或重复状态系统。
+
+接入自己的项目时，仅记录本库路径/托管入口、所需主题和项目自己的配置/实验入口，
+不复制整套指南或把个人镜像、目录、账户参数写回本库。SE3-WAM 是历史使用方示例：
+该项目使用 `docs/resources/zenith_workflow.md` 和自己的提交登记；其用户按该项目入口执行，
+直接调用本页 POST 不会自动写入其 Fleet ledger。其他用户不需要该仓库或调度实现。
 
 2026-10-07 新工具已通过 12 项测试；现有 Token 的 capabilities、项目、规格、实例、任务详情/日志/副本/metrics、
 开发机和训练镜像读取通过。区 10 的单卡开发机、单卡标准/低优训练、2 Worker × 8 卡低优训练
