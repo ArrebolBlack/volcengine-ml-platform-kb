@@ -7,7 +7,7 @@
 ## 获取知识库
 
 云端仓库：[ArrebolBlack/volcengine-ml-platform-kb](https://github.com/ArrebolBlack/volcengine-ml-platform-kb)。
-当前为私有仓库，克隆需要维护者授予读取权限；也可使用维护者提供的知识库 ZIP，无需 GitHub 登录。
+当前为公开仓库，可直接克隆，无需 GitHub 登录；也可使用维护者提供的知识库 ZIP。
 
 ```bash
 git clone https://github.com/ArrebolBlack/volcengine-ml-platform-kb.git
@@ -27,6 +27,8 @@ API 路线无需安装官方 Zenith CLI、`volc` 或第三方 Python 包。
 3. 按[快速开始：一次性准备](docs/zenith-quickstart.md#1-一次性准备)配置本机私密文件。根目录的 [.env.example](.env.example) 只有占位符，不能直接认证；不要把真实值写回模板、聊天或 Git。
 4. 按[只读查询](docs/zenith-quickstart.md#2-查询一次选择真实参数)验证平台版本、本人身份、scope 和规格；此阶段不启动机器、不提交训练。
 5. 按同页 3A / 3B / 3C 进入已有机连接、新建开发机或训练任务；只使用本人查询到且获授权的资源与项目。
+
+需要切换账号时，按[多账号配置与切换](docs/zenith-quickstart.md#多账号配置与切换)使用独立凭据及回执目录，先核对身份，不覆盖旧账号配置。
 
 ## 让 Codex 使用
 

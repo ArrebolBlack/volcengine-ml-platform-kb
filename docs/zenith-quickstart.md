@@ -87,6 +87,65 @@ zenith_api get /pt/api/compute-offerings
 后续 PowerShell 示例的 `Invoke-Zenith ...` 对应 Bash 的 `zenith_api ...`；
 JSON 和 API 字段相同，变量、JSON 解析及文件操作须按本机 shell 改写，不把 PowerShell 整段粘贴到 Bash。
 
+### 多账号配置与切换
+
+每个账号使用自己的 Token 文件，不覆盖另一账号的凭据。例如在已忽略的目录中准备
+`local_private/zenith/account-a/zenith.env` 和 `local_private/zenith/account-b/zenith.env`，
+格式和权限沿用上文；`account-a/b` 只是本机别名，不是平台登录名或 API 参数。
+请求 body、幂等 key 和回执路径也按账号分开。推荐每个账号使用独立终端会话，避免复用旧变量。
+本工具没有隐式登录状态或官方 CLI profile；每次请求都按当前参数和环境读取凭据。
+
+先定义本节的工具函数，再选择目标账号。**改 `$TokenFile` 不会更新已有 `$ZArgs` 数组**，
+必须同时重建参数。非空 `ZENITH_API_TOKEN` 会覆盖文件，所以切换到文件认证时先清除当前进程中的该变量。
+以下只执行身份和权限查询，不创建、启停或取消资源。
+
+PowerShell：
+
+```powershell
+$Account = 'account-b' # 改成本机已配置的账号别名
+$ZenithOrigin = '<该账号的 Zenith HTTP(S) origin>'
+if (Test-Path Env:ZENITH_API_TOKEN) { Remove-Item Env:ZENITH_API_TOKEN }
+$Private = Join-Path $KB "local_private/zenith/$Account"
+$TokenFile = Join-Path $Private 'zenith.env'
+$ZArgs = @('--base-url',$ZenithOrigin,'--token-file',$TokenFile)
+# 仅该部署网络确认可直连时，在首次请求前追加 --direct。
+$OfferingId = $ResourceZone = $Vendor = $InstanceId = $JobId = $null
+$Ssh = $Key = $BodyFile = $KeyFile = $Receipt = $Result = $null
+$Me = Invoke-Zenith get /pt/api/me | ConvertFrom-Json
+$Me
+$Caps = Invoke-Zenith get /pt/api/ai/capabilities | ConvertFrom-Json
+$Caps.scopes
+```
+
+Bash：
+
+```bash
+ACCOUNT='account-b'
+ZENITH_ORIGIN='<该账号的 Zenith HTTP(S) origin>'
+unset ZENITH_API_TOKEN
+PRIVATE="$KB/local_private/zenith/$ACCOUNT"
+TOKEN_FILE="$PRIVATE/zenith.env"
+Z_ARGS=(--base-url "$ZENITH_ORIGIN" --token-file "$TOKEN_FILE")
+# 仅该部署网络确认可直连时，在首次请求前追加 --direct。
+zenith_api get /pt/api/me
+zenith_api get /pt/api/ai/capabilities
+```
+
+确认 `/me` 返回的用户标识符合目标账号，再按第 2 节重新查询项目、配额、资源、镜像和存储授权。
+身份不符或查询失败时不要 POST；不得沿用旧账号的项目 ID、实例/任务 ID、挂载 ID、镜像候选或 SSH 端点。
+同一账号仅轮换 Token 时仍核对身份与 scope，不把本机文件名当成认证证明。
+
+切换只影响当前会话后续请求；其他终端、已启动的监控/子进程和云端任务不会跟着切换，
+也不会自动取消、转移旧账号资源或停止计费。旧操作响应不明时，用**原账号的有效凭据、原 origin 和原 key**
+查询回执；不要拿新账号查不到的结果判定旧操作未创建，更不能换账号重提作为网络重试。
+保留尚待核对的旧 body/key；原账号资源的处置按原任务授权另行完成。
+
+浏览器登录、SSH 私钥/公钥注入、官方 CLI profile，以及原生 `volc`/TOS 凭据分别管理，
+不会因本工具切换 Token 而改变。浏览器按本人登录流程切换，SSH 从新账号实例重新取端点并核对授权；
+官方 CLI 用户另见[profile 优先级](zenith-account-admin.md#cli-安装与最小只读启动)。
+给新对话提供目标账号别名、origin、Token 文件绝对路径及项目范围即可，不提供 Token 明文，
+也不要让其他运行任务使用的默认凭据被覆盖。
+
 ## 2. 查询一次，选择真实参数
 
 ```powershell

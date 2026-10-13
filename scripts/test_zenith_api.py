@@ -39,6 +39,26 @@ class ZenithApiTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     api.read_token(self.token)
 
+    @patch.dict(os.environ, {"ZENITH_API_TOKEN": ""})
+    def test_explicit_account_files_are_read_on_each_request(self):
+        other_token = self.root / "other-account.env"
+        other_token.write_text("ZENITH_API_TOKEN=other-account-example\n", encoding="utf-8")
+        with patch.object(api, "request", return_value=(200, b"{}", None)) as send:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                for origin, token_file in (
+                    ("http://zenith.example", self.token),
+                    ("https://other-zenith.example", other_token),
+                    ("http://zenith.example", self.token),
+                ):
+                    self.assertEqual(api.main([
+                        "--base-url", origin, "--token-file", str(token_file), "get", "/pt/api/me",
+                    ]), 0)
+            self.assertEqual([call.args[1:4] for call in send.call_args_list], [
+                ("GET", "http://zenith.example/pt/api/me", "file-example"),
+                ("GET", "https://other-zenith.example/pt/api/me", "other-account-example"),
+                ("GET", "http://zenith.example/pt/api/me", "file-example"),
+            ])
+
     def test_url_and_endpoint_boundaries(self):
         for path, method in (
             ("https://elsewhere.example/pt/api/ai/instances", "GET"),
