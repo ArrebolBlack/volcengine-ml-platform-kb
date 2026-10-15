@@ -1,13 +1,14 @@
 # 平台文档
 
 新 Zenith 用户先读根 [README](../README.md)，再按[可执行快速开始](zenith-quickstart.md)配置本人端点与凭据。
+已接入的项目从[已有配置的执行路线](zenith-quickstart.md#已有配置的执行路线)进入，不重做首次接入、账号切换或全目录读取。
 Zenith 是多云集成平台；下表原有 `volc` 文档属于火山引擎原生 MLP，两套身份、接口与资源归属不能混用。
 
 | 当前任务 | 阅读 |
 |---|---|
-| Zenith 个人接入、账号切换、只读验证、创建/启动开发机、提交/查询任务与恢复回执 | [zenith-quickstart.md](zenith-quickstart.md) |
+| Zenith 已接入项目执行路线；首次接入、开发机、训练提交、验收与恢复 | [zenith-quickstart.md](zenith-quickstart.md) |
 | Zenith 登录、启动路径、自动化结论与待实测缺口 | [zenith.md](zenith.md) |
-| Zenith 开发机、SSH、训练、DDP、短入口/代码交接与502诊断、回收与推理 | [zenith-compute.md](zenith-compute.md) |
+| Zenith 开发机、SSH、DDP、共享盘短入口、502诊断、观察与回收 | [zenith-compute.md](zenith-compute.md) |
 | Zenith 存储：区 10 PFS、TOS 训练读取与容量评估、vePFS/镜像复用 | [zenith-data.md](zenith-data.md) |
 | Zenith API/CLI 覆盖、已实测的 Codex SSH 接入、项目与权限 | [zenith-account-admin.md](zenith-account-admin.md) |
 | 火山原生 MLP：第一次从开发机进入自定义任务 | [quickstart.md](quickstart.md) |

@@ -8,6 +8,23 @@
 首次接入只执行第 1、2 节。第 3 节会创建或启停计算资源，按自己的任务授权选择一个分支；
 本库不提供账号或项目默认值，也不要求安装 SE3-WAM、GPU Fleet 或其他项目的调度工具。
 
+## 已有配置的执行路线
+
+已有项目接入记录时，先读项目的实验主文档、资源入口和本次 job 配置，复用已验证的账号、
+镜像、共享盘路径及提交工具。只恢复本机会话所需的凭据文件引用与参数；不重读首次接入、
+多账号切换或全量镜像目录。身份或权限变化查第 1 节，资源配置变化才定向查第 2 节。
+
+| 当前要做的事 | 最短路径 |
+|---|---|
+| 已有开发机需要启动/连接 | [3A](#3a-已有开发机启动与连接)；已运行只取当前 SSH 端点 |
+| 提交实验 | [3C](#3c-自定义训练准备准入提交与结果)；先验证真实入口，再提交共享盘脚本的短入口 |
+| 返回不明、超时或 502 | [第 4 节](#4-超时恢复与结束)；用原账号、原 key 对账，保留原 body |
+| 已启动、等待结束或收尾 | [观察与回收](zenith-compute.md#按真实任务身份观察)；按真实 job ID 和持久应用输出判断 |
+
+项目已有提交封装时使用该入口；本页 HTTP 命令只解释平台步骤，不绕过项目资源与监控契约。
+同一 job 由一个执行者持有 body、key 和回执；给新对话提供实验主文档与这些文件的位置即可。
+准入、操作、资源和应用进展的验收见[验收与交接](#验收与交接)，不用每次重新建立平台知识。
+
 ## 1. 一次性准备
 
 需要：能访问自己平台部署的网络、有效个人 Token、Python 3.9+、一个本机私密目录。
@@ -299,13 +316,16 @@ $Result.operation | Select-Object state,finalization_state,vendor,vendor_instanc
 复制 [任务 JSON](../examples/zenith-job.json) 到 `$Private/job.json`。选择训练 offering 和
 `workload=JOB` 镜像，填写同一镜像中已验证的工作目录、绝对解释器及脚本。
 入口需包含项目参数、持久输出、失败退出及所需 checkpoint 恢复；仅有仓库不等于环境已安装。
-代码/数据须预先部署到该任务能访问的同区存储。不要假定开发机系统盘会传给任务。
+默认将脚本和非秘密配置先部署到该任务能访问的同区共享盘，读回确认本次路径和内容，
+再以绝对解释器加脚本路径提交短入口；不要把源码、安装过程或大段配置塞进 command/ENV。
+复用项目已有的部署/提交入口，先用真实模型输入完成能覆盖本次变更的最小运行，检查持久输出；
+未改变的已验证依赖不重复全量测试。不要假定开发机系统盘会传给任务。
 
-`replicas` 为 Worker 数，总 GPU＝offering.gpu_count × replicas；先做单 Worker 短验证。
+`replicas` 为 Worker 数，总 GPU＝offering.gpu_count × replicas；新环境先做最小短验证。
 单机多卡仍须真实 `torchrun` 或其他多卡入口，多机依 [DDP 说明](zenith-compute.md)验证，
 不能照搬火山 `MLP_*` 到其他厂商。API 上限 256 副本不代表当前容量/准入。
 新接入通常省略 `framework/image_vendor`；确需厂商 DDP 模式时单独核对兼容字段。
-短入口、ENV分片、GPFS脚本和官方对象交接的实证及长度/502边界见
+共享盘短入口、历史 ENV 分片及长度/502边界见
 [API短入口与代码交接](zenith-compute.md#api短入口与代码交接)。个人任务可省略`project_id`；
 需要项目归属时显式填写，不能从某次省略成功推导项目字段会导致失败。
 不传 `max_runtime_seconds`、`storage_mode`、原生 `queue_id/flavor_id`。
@@ -329,13 +349,15 @@ $Receipt = Invoke-Zenith post "/pt/api/compute-offerings/$OfferingId/jobs" --bod
 $Result = Invoke-Zenith wait $Receipt.operation_id --timeout 300 | ConvertFrom-Json
 $Vendor = $Result.operation.vendor
 $JobId = $Result.operation.job_id
-Invoke-Zenith get "/pt/api/ai/jobs/$Vendor/$JobId"
-Invoke-Zenith get "/pt/api/ai/jobs/$Vendor/$JobId/logs?log_num=100"
-Invoke-Zenith get "/pt/api/ai/jobs/$Vendor/$JobId/replicas?page=1&page_size=50"
+if ($JobId) { Invoke-Zenith get "/pt/api/ai/jobs/$Vendor/$JobId" }
+else { $Result.operation | Select-Object state,finalization_state,job_url }
 ```
 
 无 job_id 时仍是准备/Zenith 等待阶段，继续核对同一 operation/控制台 job_url，不重交新任务。
 有 ID 后看实际状态、观测时间、退出与输出；日志/指标是否可得由厂商及任务决定。
+继续完成一次[启动验收](#验收与交接)，直到真实应用已推进并写出持久记录，不能在取得 job ID 后即交付。
+之后按项目已有指标/持久日志读取进展；只在启动失败或应用停滞时定向查平台日志、事件和副本。
+区 10 曾出现应用正在训练而平台日志为空，重复调用同一空接口不会增加证据，详见[观察边界](zenith-compute.md#按真实任务身份观察)。
 `GET .../metrics?minutes=30` 查询近 30 分钟，`minutes` 范围 1–120；可选 `replica` 只能来自真实副本。
 没有采样不能解释成零负载。
 
@@ -359,18 +381,24 @@ Invoke-Zenith wait '<原 operation_id>' --timeout 300
 `SUCCEEDED` 仅操作成功，还要看 `finalization_state` 和机器/任务真实状态；需要资源登记核对时不创建替代品。
 每个新意图用新 key，网络重试始终原 key，启停和取消各有自己的 key。
 按服务端 `Retry-After` 等待；不要高频重刷准入失败。
+初次有界等待结束后保留 ID，按任务预计排队/阶段时长安排下一次检查；不要让对话持续空转。
 
 获得对应结束授权后，停止实例用 `POST /pt/api/ai/instances/{vendor}/{id}/stop`；
 取消训练用 `POST /pt/api/ai/jobs/{vendor}/{jobId}/cancel`；尚无 job_id 用
 `POST /pt/api/operations/{创建operation_id}/cancel-job`。body 均为 `{}`，使用独立 key，
 wait 后继续查资源终态。取消不删除 checkpoint；开发机内 `shutdown` 不代替平台停止。
 实例删除、改挂载、镜像资产管理仍走控制台。
+自然结束后先读持久退出结果和项目指标，收回结果与必要诊断，按项目保留策略处置 checkpoint；
+再释放本次专用计算资源并确认终态，结束对应观察。存储文件清理与平台任务删除分别核对。
 
 ## 验收与交接
 
-成功分五层：**准入允许 → 操作成功 → 资源运行 → 机内环境/挂载正确 → 持久产物及指标正确**。
-保存该项目的实际 body（不含秘密）、key 文件位置、operation/resource ID、运行命令和结果，
-放在项目已有的实验记录中；不另建调度或重复状态系统。
+本次启动依次确认：**准入允许 → operation 成功 → 真实 job ID/资源运行 → 机内环境和挂载正确
+→ 真实应用进度及持久输出出现**。准入不预留资源，202 不证明已运行，GPU 有负载不代替应用进展。
+实验完成再确认自然终态、退出结果和项目验收指标；启动验收不等于科学结论成立。
+将实际 body（不含秘密）、key 文件位置、operation/resource ID、运行命令、应用输出路径及观察入口
+放在项目已有的实验记录中；失败只保留触发条件、症状、处理和验证边界，不复制逐轮日志。
+实时状态留在平台及项目已有运行工具，不另建调度或重复状态系统。
 
 接入自己的项目时，仅记录本库路径/托管入口、所需主题和项目自己的配置/实验入口，
 不复制整套指南或把个人镜像、目录、账户参数写回本库。SE3-WAM 是历史使用方示例：

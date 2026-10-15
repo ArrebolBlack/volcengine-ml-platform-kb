@@ -222,48 +222,57 @@ PRO6000 的 CUDA 与 NVML UUID 曾实际不同，直接把 NVML UUID 填入 `CUD
 不要复用旧机 UUID、EGL 序号或另一厂商的 CUDA compat/NCCL 参数。
 来源：[设备映射实测](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/resources/zenith_pro6000_2x_dev.md#cudaegl-与-nvml-的身份差异)。
 
-### 提交、观测与恢复
-
 ### API短入口与代码交接
 
-2026-10-13区10的一次正式评测使用API成功创建并运行：省略`framework`和`project_id`，
-使用目录中的精确JOB镜像、单Worker八卡低优任务，原HTTP202取得operation，后续GET200核真实JOB，
-最终SUCCEEDED并完成项目自身模型与140场评测验收。请求入口264字符，以镜像内绝对Python
-执行`-c`解码4773B bootstrap；两个ENV分片为4096/2268字符，含控制参数共5个ENV。
-bootstrap仅下载229048B代码/证据闭包，部署到独占GPFS目录后exec实际脚本；大模型和数据在GPFS直接读。
-这是该配置的成功实证，不是所有镜像/资源区的保证；实验结果归使用方维护。
-
-在当前OpenAPI 3.8.0中，入口最多8192字符、ENV最多64个、每值最多4096字符。
-需要项目归属/项目付费/项目存储时仍显式选正确项目；个人任务可省略`project_id`。
-`framework`是兼容字段，新接入可省略，但任务内必须自行核对真实节点环境，不能把网页PyTorchJob
-选项或API默认映射当成启动编排已经相同。10月13日实见选择个人镜像后网页只有
-PyTorchJob/TFJob/MPIJob/RayJob；手填Custom会回到PyTorchJob，旧表单观察不能作当前填写指南。
-
-可选入口如下，按实际依赖选择一种：
+默认将脚本与非秘密配置预先部署到已验证的共享盘，以镜像内绝对解释器执行短入口：
 
 ```sh
 /绝对解释器/python -B -s -u /已部署GPFS目录/run.py --本次参数
 ```
 
-```sh
-/绝对解释器/python -B -s -u -c 'import base64,os;exec(base64.b64decode("".join(os.environ["BOOTSTRAP_B64_"+str(i)] for i in range(int(os.environ["BOOTSTRAP_PARTS"])))))'
-```
+本次 job 使用独立运行目录，提交前读回脚本/配置并检查输入、输出和挂载；镜像、依赖或入口变化时，
+先在可用开发机用真实模型输入跑最小验证，再验收正式 JOB 的实际环境和应用进展。
+开发机验证不能代替 JOB 的挂载、平台变量或多节点拓扑验证，开发机系统盘文件不会自动出现于 JOB。
+提交 command/ENV 仅携带启动必需参数，不承载源码包、大段 shell 或完整配置。
+使用方已有提交器和监控契约时，外置代码后仍须使用其支持的入口形式，不能自行包一层而绕过校验。
 
-分片按单值限制生成并完整解码核对；代码包较大时用当前官方文件源签发的短期GET或已有TOS客户端，
-完整核对字节后部署，签名URL只放私有配置。期限要覆盖实际启动，不能把过期URL重放进旧请求。
-路径、源码和镜像环境必须由本次任务实读；开发机系统盘文件不会自动出现在JOB中。
+若项目已有受支持的对象存储/HTTPS 交接，使用其现有工具部署到持久目录；URL 有效期须覆盖实际启动，
+签名 URL 只放私有配置，不能把过期 URL 重放进旧请求。没有共享目录写入路径时先补齐部署能力，
+不要靠继续切分 ENV 或加长命令来试探平台。代码和环境的最小验证通过后复用结果，不重复安装整套环境。
 
-HTTP502表示网关取得无效上游响应，不能直接诊断为命令过长、模型下载失败或训练崩溃。
-该实验旧API与网页创建均出现MAIN_INTENT/502且没有JOB；成功版本同时改变入口承载和提交路径，
-故尚未隔离旧失败的单一根因。大命令/ENV的假设应比较实际原body与成功样本：超公开限制曾明确返回
-400/invalid_training_input/before_dispatch；符合单字段限制也不证明厂商未公开的总量约束。
-原请求、key和响应保留，UNKNOWN只查原key，不自动重POST或换key。
-创建202、operation成功、JOB运行、持久产物和科学验收分别确认；“卡数预留已释放”仅逻辑台账。
+2026-10-12 复核的 OpenAPI 3.8.0 上限为入口 8192 字符、ENV 64 个、每值 4096 字符；
+这是已公开字段上限，不是推荐请求体积或厂商完整约束。提交前在本地记录序列化请求总字节、
+入口长度和 ENV 数量/最大值长度即可，无需把完整 body 打印进对话。请求应保持少量 KB 的短配置；
+明显增大时先检查是否误装入代码或完整环境，不把这个设计目标误当作平台硬限制。
+需要项目归属/付费/存储时仍显式选正确项目，个人任务可省略 `project_id`。
+`framework` 是兼容字段，新接入可省略，但仍须核对真实节点环境与启动编排；
+2026-10-13 网页个人镜像的框架选项已不同于旧表单，不能拿旧观察当当前填写指南。
+
+历史 ENV 分片仅供解释旧任务：2026-10-13 区 10 的一次正式评测用短 `python -c` 入口解码
+两个 ENV 分片的 bootstrap，下载代码后在 GPFS 执行，最终完成项目评测。这证明该次配置可运行，
+不作为新任务模板；新任务优先采用上面的共享盘脚本。具体历史大小和实验结果见原实验记录。
+
+HTTP 502 表示网关取得无效上游响应，不能直接诊断为命令过长、模型下载失败或训练崩溃。
+历史评测的成功版本同时改变了入口承载与提交路径；另一例大幅缩小请求时也改变了 Worker/GPU 拓扑，
+均未隔离旧失败的单一根因。超公开字段上限曾明确返回 `400/invalid_training_input/before_dispatch`；
+符合字段上限也不证明满足厂商未公开的总量约束。排障比较原 body、错误阶段和成功样本的所有差异。
+原请求、key 和响应保留，UNKNOWN 只查原 key，不自动重 POST 或换 key；具体恢复命令见
+[快速开始](zenith-quickstart.md#4-超时恢复与结束)。创建、运行和应用验收分层确认，“卡数预留已释放”仅逻辑台账。
 
 来源：[RFC9110 502](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6.3)、
-[原实验提交经验及证据](https://github.com/ArrebolBlack/se3-wam-research/blob/codex/history-eight-continue-epoch4/docs/experiments/DB0-TRAIN0/results/history_encoding_fresh_20261010/pro6000/continuation/rollout/submission-method.md)。
+[历史评测提交证据](https://github.com/ArrebolBlack/se3-wam-research/blob/codex/history-eight-continue-epoch4/docs/experiments/DB0-TRAIN0/results/history_encoding_fresh_20261010/pro6000/continuation/rollout/submission-method.md)、
+[共享盘短入口实证](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/experiments/BASE1/results/openwam_pro6000_fresh_20261011.json)。
 
 ### 按真实任务身份观察
+
+首次启动按[快速开始的验收链](zenith-quickstart.md#验收与交接)确认应用真实推进；之后把资源状态与
+科学进展分开读取。Zenith 查询用于排队、抢占、退出和故障定位；训练曲线与保存进度优先从项目已接入的
+SwanLab、W&B、TensorBoard 或持久应用日志取得。服务尚未接入时使用已有持久输出，不宣称指标服务已可用。
+每次观察只返回状态变化、最新进度/时间、保存点、异常和下一步；应用停滞时才读相关日志末尾或指定阶段。
+排队按回执提示退避，健康运行按项目阶段耗时/预计完成点安排检查，不用短间隔对话反复读全量日志。
+原生日志/指标采集可持续运行，对话只在完成、失败、停止推进或需要行动时报告。
+监控频率、checkpoint 保留、科学验收与归档由使用方项目拥有；SE3-WAM 的唯一执行入口见
+[项目工作流](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/resources/zenith_workflow.md)。
 
 准备镜像依赖 → 小规模验证命令和持久输出 → 核对总 GPU、项目/个人额度、镜像与挂载 → 创建。
 帮助声明若提交提示“准备/结果待确认”，保留锁定配置并用“重试同一操作”，避免改名重复创建。
@@ -301,6 +310,11 @@ HTTP502表示网关取得无效上游响应，不能直接诊断为命令过长�
 只读观察路径见研究仓库 `docs/resources/zenith_workflow.md`，
 PFS 读回及严格恢复证据见[四臂执行记录](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/experiments/DB0-TRAIN0/results/object_reconstruction_late_fresh_20261011/pro6000/deployment.md)。
 具体训练进度与验收归研究仓库；尚未验收上游日志修复。
+
+结束后从持久目录读取退出结果、最终指标和所需产物，在项目实验记录中完成验收与归档；
+失败时先保存足够定位原因的日志。按项目已确定的保留策略清理中间文件和 checkpoint，不能仅凭
+平台 `SUCCEEDED` 删除尚待评测或恢复的文件。确认本次专用计算资源终态，结束对应观察；
+停止/取消接口见[快速开始](zenith-quickstart.md#4-超时恢复与结束)。平台任务记录与底层存储分别回收。
 
 维护者应核对百度 v2 [DescribeJob](https://cloud.baidu.com/doc/AIHC/s/Kmayvejf0) 的 `needDetail=true`：
 该条件才返回 `pods/historyPods`，任务列表不含这些副本详情；
