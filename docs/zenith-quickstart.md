@@ -200,7 +200,8 @@ $Instances.instances | Select-Object id,vendor,vendor_instance_id,name,status,st
 再看该 offering 的 `capabilities_by_resource_zone`、对应存储预览、worker 状态和执行类别。
 这些不预留 GPU。新项目没有平台项目关系时可走个人任务；不能编造 `project_id`。
 学生标准任务资格、卡时、规格和低优份额仍由平台检查。正式项目成员资格可以允许个人标准任务；
-任务若选择项目，还会受该项目存储的资源区约束，两者不是同一个检查。
+任务选择项目时另核所需存储的资源区；项目存储区不能直接作为训练计算区白名单。
+区10项目标准任务已有 advisory 准入假阴性，见[实测与处理](zenith-account-admin.md#准入假阴性与跨区项目训练)。
 
 `mount-disks` 是登记盘/数据集目录，`bucket-mounts` 是项目 TOS/BOS 候选目录；二者的 ID 不混用。
 需要显式挂载时，按[挂载字段边界](zenith-data.md#挂载权限与现有机器补挂)填写创建 body；

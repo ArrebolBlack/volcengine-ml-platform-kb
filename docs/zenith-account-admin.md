@@ -378,8 +378,9 @@ description（≤1000字符）。`image_id` 可选；提供时必须来自目标
 
 当前 schema 的两类创建均支持自动目录开关、`mount_disk_ids` 和项目 TOS/BOS 的 `bucket_mount_ids`；
 准确的候选来源、路径和读写边界统一见[挂载字段](zenith-data.md#挂载权限与现有机器补挂)。
-schema 操作总述仍有“namespace flags 仅管理员”的旧句，与属性定义及最新训练说明冲突；
-最小请求优先保留平台默认挂载，显式开关尚未通过本账号 API 写入验收。显式挂载字段与
+schema 属性描述为可选挂载选择，但操作总述仍要求 namespace flags 仅控制台管理员可用。
+2026-10-18 本账号实际提交 `mount_project=false` 返回403，未产生 operation；省略该字段后创建通过。
+最小请求保留平台默认挂载，不把 schema 接受字段等同于当前身份有写权限。显式挂载字段与
 `storage_mode` 的冲突由 schema 拒绝，不能以省略字段推断实际挂载；创建后手动调整仍不授予个人 Token。
 创建和准入 schema 均为 `additionalProperties: false`，不加入猜测的厂商字段。
 
@@ -397,6 +398,25 @@ schema 操作总述仍有“namespace flags 仅管理员”的旧句，与属性
 当前 schema 接受 `resource_zone` 字符串 `1/2/3/4/5/6/10`。帮助和历史控制台把它们映射为
 1–4 天翼、5 火山、6 无问、10 百度，但 OpenAPI 的资源区目录本身不含厂商字段，也不保证路由、容量
 或权限；执行时只能使用 `capabilities.resource_zones`、具体 offering 的按区能力和准入响应。
+
+#### 准入假阴性与跨区项目训练
+
+**`admission` 是 advisory；`no_matching_route` 不等于真实 JOB 创建接口拒绝，更不能推出该资源区不支持 standard。**
+2026-10-18 在 OpenAPI 3.10.0 实测：项目 `c20250502` 的 `resource_zones=["5"]`，
+区10 PRO6000 的 JOB capabilities 同时支持 `standard` 和 `low_priority`。同账号带该项目的
+standard 预检返回 `blocked/no_matching_route`；保持项目和standard、使用默认挂载提交4卡短诊断，
+创建 operation `yagg070cfapfy2fh2oygy5w43` 与 finalization 均为 `SUCCEEDED`，
+真实 JOB 为 `job-ww7e2221zfwa`，详情保留原项目与 `execution_class=standard`。
+17:51:32–17:51:42（北京时间）应用日志完成4卡可见性检查与10秒等待并输出成功标记；
+副本最终为 `Succeeded` 且有结束时间，随后 JOB 摘要也确认为 `SUCCEEDED`，确认实际执行并退出。
+网页同配置提示“项目存储位于资源区5，当前训练资源区不支持挂载”，仍保留项目归属和区10计算配置。
+
+本例验证的是预检与创建存在差异；不代表所有 blocked 都可忽略，也不保证容量或实际所需挂载。
+`projects.resource_zones` 在此不能作为训练计算区白名单。遇到该组合，应核对同账号、实际项目ID、
+offering、class、镜像和所需存储；有明确创建授权时用有界诊断或已授权任务验证真实创建，
+保存唯一请求和key，按回执、JOB及应用日志验收。不要仅为让预检变绿而删项目、转个人付费、迁区或降优。
+若必需的数据只在区5项目盘，则仍需解决数据可达性，不能因计算创建成功就假定跨区共享。
+不选项目的预检通过也不代表个人卡时足够：card_hours 明确列为 unchecked。
 
 创建、取消、启停、重启、改配要求平台原生 `Idempotency-Key`（8–200字符，缺失可返回428）。
 准入、公钥管理和注入没有这项头要求。同一意图重试必须保留原键和原内容；
