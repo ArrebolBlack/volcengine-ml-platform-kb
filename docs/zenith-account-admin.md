@@ -1,7 +1,7 @@
 # Zenith 账户、配额、个人 API 与管理
 
 从[快速启动](zenith-quickstart.md)执行开发机或训练工作流；本页用于查权限、计费和 API 契约。
-2026-10-11 补核 OpenAPI 3.8.0 的 TOS/BOS 挂载点；存储、训练和项目帮助沿用前次核查，其余沿用 10 月 7 日。
+2026-10-18 定向核对 OpenAPI 3.10.0、卡时与工作台帮助的项目扣费规则；TOS/BOS 挂载点沿用 10 月 11 日 3.8.0 核查，其余沿用此前说明。
 个人 HTTP API 的已有机启停、改配及区 10 训练创建、取消已有实测；开发机新建失败及其余边界见[实测证据](zenith.md#实测证据与剩余边界)。
 
 ## 权限与资源归属
@@ -50,10 +50,7 @@
 
 - 1 GPU × 1 小时＝1 卡时，所有 GPU 型号倍率 1.0；创建本身无 1 卡时起步价。
 - 约每 5 秒结算已观测运行时长，按 GPU 毫秒聚合；开发机快照约 30 秒、任务约 60 秒，启停边缘会延迟。
-- 开发机付款与项目归属分开：`funding_mode` 默认 `personal`；显式选择 `project` 时，先扣本人获分配的
-  项目额度、再扣项目未分配余额，不足拒绝开机或请求停机，**不回退个人卡时**。
-- 普通项目训练按本人项目专属余额 → 项目共享/周期余额 → 个人余额扣款；个人标准训练只扣个人。
-  **低优训练不扣个人或项目卡时，但仍统计 GPU 运行用量；低优开发机仍扣卡时。**
+- 开发机与标准训练均可使用项目卡时，选择方式见下文[开发机与训练扣费](#开发机与训练扣费)。
   不自动使用另一项目或另一人的专属余额，同一使用不重复扣。
 - 专属转入只供接收者在对应项目使用，不加入个人余额，来源周期结束失效。
   趋势是实际运行量，“个人已用”仅含个人承担部分，两者可以不同。
@@ -63,6 +60,39 @@
 - 周期策略存在时优先于兼容月度限制；预算主要观察/提醒，不是硬准入。
   卡时不足会限制新建/启动；运行中是否停止须区分开发机付款模式、标准训练宽限及预约规则，不能统一说“不停机”。
 - 月度借用仅管理员同时配置相邻月份并允许时可用；1.5×/2× 是借用成本，不是 GPU 型号倍率。
+
+### 开发机与训练扣费
+
+开发机付款与项目归属分开。新建 GPU 开发机的 `funding_mode` 默认 `personal_first`；
+控制台对应“优先扣费来源”和“余额不足时继续使用其他来源”。`allocated` 指当前成员在所选项目获分配的
+专属额度，`shared` 指该项目未分配共享余额。以 OpenAPI 3.10.0 为准：
+
+| `funding_mode` | 扣费来源及顺序 |
+|---|---|
+| `personal_first`（默认） | 个人 → 本人项目分配 → 项目共享；未选项目时仅个人 |
+| `allocated_first` | 本人项目分配 → 个人 → 项目共享 |
+| `shared_first` | 项目共享 → 个人 → 本人项目分配 |
+| `personal_only` | 仅个人 |
+| `allocated_only` | 仅本人项目分配 |
+| `shared_only` | 仅项目共享 |
+| `personal`、`project`（旧值） | 分别保留仅个人、本人项目分配 → 项目共享的原契约；后者不回退个人 |
+
+`allocated_*`、`shared_*` 和旧 `project` 模式须提供有参与权限的 `project_id`。选定来源耗尽时拒绝开机或请求停机，
+停机尾段记为未结算，不转扣未选择的来源。付款设置在创建时确定，启停/重建沿用；旧开发机不会自动迁移。
+CPU 开发机不消耗 GPU 卡时，使用 CPU offering 时省略 `funding_mode`。
+
+标准训练通过 `project_id` 与 `execution_class=standard` 使用项目卡时，顺序为
+**本人项目专属余额 → 项目共享余额 → 个人余额**；不选项目则只扣个人。
+训练 schema 不接受 `funding_mode`，不能用开发机的 `*_only` 控制训练付款。
+本库训练示例显式使用 `low_priority`；平台 API 省略执行类别仍默认 `standard`。
+**低优训练不扣个人或项目卡时，但仍统计 GPU 运行用量；低优 GPU 开发机仍扣卡时。**
+
+2026-10-18 仅通过匿名 GET 核对[OpenAPI](http://10.1.130.101/pt/api/openapi.json)、
+[卡时帮助](http://10.1.130.101/help/projects/quotas-billing.html)与
+[工作台帮助](http://10.1.130.101/help/compute/workbench.html)，并本地验证 HTTP 工具透传提交字段。
+未创建开发机、提交训练或实测扣费。卡时帮助仍有旧的“不会因卡时停止资源”概括，不能覆盖上述开发机模式和标准训练宽限规则。
+
+### 项目配额与费用
 
 项目配额有“运行中”和“总提交”两组水位；总提交包括运行、启动/创建、排队。
 实例数/GPU 数分别限制，个人、项目总量、项目成员同时检查。
@@ -303,8 +333,8 @@ capabilities 不另要求 scope，但仍需有效 Bearer。单个写请求的 sc
 ```
 
 `name` 为 1–128 个 Unicode code points；禁止前导 Unicode 空白、控制字符和非法代理字符，不能沿用旧版
-“小写字母/数字/中划线”校验。`project_id` 可选且必须有权参与；`funding_mode` 为 `personal|project`
-（默认 `personal`），选择 `project` 时额度不足会拒绝或停止，不回退个人额度。省略 `image_id` 使用路由默认
+“小写字母/数字/中划线”校验。`project_id` 可选且必须有权参与；`funding_mode` 默认 `personal_first`，
+完整选项、项目扣费顺序及旧机行为见[开发机与训练扣费](#开发机与训练扣费)。省略 `image_id` 使用路由默认
 镜像；提供时必须是目标资源区已登记且启用的镜像。存储按本人、项目、资源区规则自动配置，不能提交原生存储 ID 或任意路径。
 成功回执含 vendor/vendor_instance_id/instance_url；创建会启动计算资源。
 
@@ -324,14 +354,15 @@ capabilities 不另要求 scope，但仍需有效 Bearer。单个写请求的 sc
   "name": "ai-train-01",
   "entrypoint": "cd '<实际已挂载训练目录>' && python train.py",
   "resource_zone": "5",
-  "execution_class": "standard",
+  "execution_class": "low_priority",
   "replicas": 1
 }
 ```
 
 `name` 与开发机相同，为 1–128 个 Unicode code points，并禁止前导 Unicode 空白、控制字符和非法代理字符；
 entrypoint 1–8192 字符；所有账号的 `project_id` 均可省略，选择项目需有写入权限。
-低优训练不扣个人或项目卡时，GPU 用量仍统计；无正式项目资格的学生仅能低优。
+本库默认低优；显式选择 `standard` 并填写 `project_id` 可用项目卡时，详见[扣费规则](#开发机与训练扣费)。
+无正式项目资格的学生仅能低优。
 `booking_id` 可选，仅能绑定有效的整节点预留、标准执行和匹配的 8-GPU offering。
 `replicas` 1–256，默认1，总 GPU＝规格卡数×副本；这只是请求上限，不保证实际容量或份额。
 可选 envs 字符串字典（最多64项、每值≤4096字符，变量名匹配 `[A-Za-z_][A-Za-z0-9_]{0,127}`）、
@@ -354,7 +385,7 @@ schema 操作总述仍有“namespace flags 仅管理员”的旧句，与属性
 准入 `POST .../admission` 需要 catalog:read，示意：
 
 ```json
-{"workload_type":"job","project_id":"<实际项目ID>","resource_zone":"5","execution_class":"standard","replicas":1}
+{"workload_type":"job","project_id":"<实际项目ID>","resource_zone":"5","execution_class":"low_priority","replicas":1}
 ```
 
 返回 allowed/blocked/unknown、reason_code、retryable；**不锁卡、不创建文件**。

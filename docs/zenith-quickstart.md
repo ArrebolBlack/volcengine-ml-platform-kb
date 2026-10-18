@@ -278,11 +278,25 @@ if ($LASTEXITCODE -ne 0) { throw 'SSH verification failed' }
 ## 3B. 新开发机：准入与创建
 
 复制 [开发机 JSON](../examples/zenith-instance.json) 到 `$Private/dev.json`，替换全部
-`__...__`：名称、资源区、精确镜像。默认个人付费；需要项目归属/项目付费时按账户页显式填写。
+`__...__`：名称、资源区、精确镜像。示例使用当前默认 `funding_mode=personal_first`。
+需要优先使用本人项目分配时，先从项目查询中选定真实 ID，再修改本机请求：
+
+```powershell
+$ProjectId = '<查询到的项目 id>'
+$DevFile = Join-Path $Private 'dev.json'
+$Dev = Get-Content -Raw $DevFile | ConvertFrom-Json
+$Dev | Add-Member -NotePropertyName project_id -NotePropertyValue $ProjectId -Force
+$Dev.funding_mode = 'allocated_first'
+$Dev | ConvertTo-Json -Depth 20 | Set-Content -Encoding utf8 $DevFile
+```
+
+只用本人项目分配时改 `allocated_only`；其他来源、余额不足的顺序及旧开发机行为见
+[开发机与训练扣费](zenith-account-admin.md#开发机与训练扣费)。HTTP 工具原样发送 JSON 字段，不自行选择付款来源。
 `storage_mode=personal` 只适合已支持个人持久盘的区；不要为了通过准入擅自改成无个人盘模式。
 
 准入文件使用**同一**资源区、优先级、项目关系和存储模式；将下例的 `__RESOURCE_ZONE__`
-替换为本人所选 offering 的 `$ResourceZone`，并按实际情况修改其他字段：
+替换为本人所选 offering 的 `$ResourceZone`，选了项目就增加相同 `project_id`。
+准入 schema 不接受 `funding_mode`，该字段仅放在创建 body：
 
 ```json
 {"workload_type":"instance","resource_zone":"__RESOURCE_ZONE__","execution_class":"standard","storage_mode":"personal"}
@@ -315,6 +329,7 @@ $Result.operation | Select-Object state,finalization_state,vendor,vendor_instanc
 
 复制 [任务 JSON](../examples/zenith-job.json) 到 `$Private/job.json`。选择训练 offering 和
 `workload=JOB` 镜像，填写同一镜像中已验证的工作目录、绝对解释器及脚本。
+示例显式默认 `execution_class=low_priority`；不要删除该字段，平台省略时仍默认标准训练。
 入口需包含项目参数、持久输出、失败退出及所需 checkpoint 恢复；仅有仓库不等于环境已安装。
 默认将脚本和非秘密配置先部署到该任务能访问的同区共享盘，读回确认本次路径和内容，
 再以绝对解释器加脚本路径提交短入口；不要把源码、安装过程或大段配置塞进 command/ENV。
@@ -328,14 +343,28 @@ $Result.operation | Select-Object state,finalization_state,vendor,vendor_instanc
 共享盘短入口、历史 ENV 分片及长度/502边界见
 [API短入口与代码交接](zenith-compute.md#api短入口与代码交接)。个人任务可省略`project_id`；
 需要项目归属时显式填写，不能从某次省略成功推导项目字段会导致失败。
-不传 `max_runtime_seconds`、`storage_mode`、原生 `queue_id/flavor_id`。
+不传 `max_runtime_seconds`、`storage_mode`、`funding_mode`、原生 `queue_id/flavor_id`。
+
+需要标准训练使用项目卡时时，显式修改以下字段；项目 ID 必须来自本人的项目查询。
+扣费顺序见[账户页](zenith-account-admin.md#开发机与训练扣费)，此修改不改变示例的低优默认值：
+
+```powershell
+$ProjectId = '<查询到的项目 id>'
+$JobFile = Join-Path $Private 'job.json'
+$Job = Get-Content -Raw $JobFile | ConvertFrom-Json
+$Job | Add-Member -NotePropertyName project_id -NotePropertyValue $ProjectId -Force
+$Job.execution_class = 'standard'
+$Job | ConvertTo-Json -Depth 20 | Set-Content -Encoding utf8 $JobFile
+```
 
 准入文件保存为 `$Private/admission-job.json`，参数与训练 body 一致；`__RESOURCE_ZONE__`
 替换为本次训练 offering 的 `$ResourceZone`，项目、优先级和副本数按实际提交填写：
 
 ```json
-{"workload_type":"job","resource_zone":"__RESOURCE_ZONE__","execution_class":"standard","replicas":1}
+{"workload_type":"job","resource_zone":"__RESOURCE_ZONE__","execution_class":"low_priority","replicas":1}
 ```
+
+若上述请求已改为项目标准训练，准入也必须增加相同 `project_id` 并改为 `standard`。
 
 ```powershell
 $Admission = Invoke-Zenith post "/pt/api/compute-offerings/$OfferingId/admission" --body-file (Join-Path $Private 'admission-job.json') | ConvertFrom-Json
@@ -361,7 +390,7 @@ else { $Result.operation | Select-Object state,finalization_state,job_url }
 `GET .../metrics?minutes=30` 查询近 30 分钟，`minutes` 范围 1–120；可选 `replica` 只能来自真实副本。
 没有采样不能解释成零负载。
 
-低优仅在授权接受抢占时选 `low_priority`，同时改准入文件，并确认当前 offering 支持。
+本库默认低优，需确认当前 offering 支持并具备 checkpoint 恢复能力；要求标准训练时显式更改 body 与准入文件。
 最新规则低优训练免费但可能份额回收；重新排队会重跑原命令，入口必须恢复已保存进度。
 低优免费记账与真实抢占后跨 allocation 恢复仍未验收；已有普通训练及同 allocation 的恢复证据
 不能替代这两项。正式训练是否有应用时限按项目当前授权和真实平台限制判断，不能复用旧诊断窗口。

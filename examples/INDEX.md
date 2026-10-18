@@ -17,8 +17,8 @@
 
 ## Zenith 个人 API 示例
 
-- [zenith-instance.json](zenith-instance.json)：开发机创建字段；按 [Zenith 快速开始](../docs/zenith-quickstart.md) 填写实际资源区与镜像后使用。
-- [zenith-job.json](zenith-job.json)：标准单 Worker 训练；填入同镜像已验证的路径与入口，复制到项目私密配置目录再提交。
+- [zenith-instance.json](zenith-instance.json)：开发机创建字段，默认 `personal_first`；项目卡时选择按 [Zenith 快速开始](../docs/zenith-quickstart.md#3b-新开发机准入与创建)填写。
+- [zenith-job.json](zenith-job.json)：默认低优的单 Worker 训练；标准训练使用项目卡时的字段修改见[提交步骤](../docs/zenith-quickstart.md#3c-自定义训练准备准入提交与结果)。
 
 `__...__` 是必须替换的占位符；示例不含 Token、真实资源 ID 或已验收的训练配置。
 它们是 Zenith HTTP body，不是上述原生 `volc` YAML。

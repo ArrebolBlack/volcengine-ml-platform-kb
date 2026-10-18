@@ -101,6 +101,35 @@ class ZenithApiTests(unittest.TestCase):
                 self.assertFalse(call.args[5].startswith(b"\xef\xbb\xbf"))
 
     @patch.dict(os.environ, {"ZENITH_API_TOKEN": ""})
+    def test_project_payment_and_training_priority_are_sent_unchanged(self):
+        examples = Path(__file__).resolve().parents[1] / "examples"
+        instance = json.loads((examples / "zenith-instance.json").read_text(encoding="utf-8-sig"))
+        job = json.loads((examples / "zenith-job.json").read_text(encoding="utf-8-sig"))
+        self.assertEqual(instance["funding_mode"], "personal_first")
+        self.assertEqual(job["execution_class"], "low_priority")
+        project_id = "p" * 25
+        submissions = [
+            ("instances", dict(instance, project_id=project_id, funding_mode=mode))
+            for mode in ("personal_first", "allocated_first", "shared_first", "allocated_only", "shared_only")
+        ] + [
+            ("jobs", dict(job, project_id=project_id, execution_class=priority))
+            for priority in ("low_priority", "standard")
+        ]
+        for resource, payload in submissions:
+            with self.subTest(resource=resource, payload=payload):
+                self.body.write_text(json.dumps(payload), encoding="utf-8")
+                with patch.object(api, "request", return_value=(202, b"{}", None)) as send:
+                    code, out, err = self.run_cli([
+                        "post", f"/pt/api/compute-offerings/offering/{resource}",
+                        "--body-file", str(self.body), "--key-file", str(self.key),
+                    ])
+                    self.assertEqual(code, 0)
+                    self.assertEqual(json.loads(send.call_args.args[5]), payload)
+                    send.assert_called_once()
+                if resource == "jobs":
+                    self.assertNotIn("funding_mode", payload)
+
+    @patch.dict(os.environ, {"ZENITH_API_TOKEN": ""})
     def test_lost_response_never_retries(self):
         with patch.object(api, "request", side_effect=URLError("timed out")) as send:
             code, out, err = self.run_cli(["post", "/pt/api/compute-offerings/offering/jobs", "--body-file", str(self.body), "--key-file", str(self.key)])

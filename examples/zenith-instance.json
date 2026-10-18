@@ -4,5 +4,5 @@
   "image_id": "__IMAGE_ID__",
   "execution_class": "standard",
   "storage_mode": "personal",
-  "funding_mode": "personal"
+  "funding_mode": "personal_first"
 }
