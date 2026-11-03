@@ -8,7 +8,7 @@ Zenith 是多云集成平台；下表原有 `volc` 文档属于火山引擎原�
 |---|---|
 | Zenith 已接入项目执行路线；首次接入、开发机、训练提交、验收与恢复 | [zenith-quickstart.md](zenith-quickstart.md) |
 | Zenith 登录、启动路径、自动化结论与待实测缺口 | [zenith.md](zenith.md) |
-| Zenith 开发机、SSH、DDP、共享盘短入口、502诊断、观察与回收 | [zenith-compute.md](zenith-compute.md) |
+| Zenith 开发机、SSH、DDP、共享盘短入口、载荷与502诊断、观察与回收 | [zenith-compute.md](zenith-compute.md) |
 | Zenith 存储：区 10 PFS、TOS 训练读取与容量评估、vePFS/镜像复用 | [zenith-data.md](zenith-data.md) |
 | Zenith API/CLI、项目卡时扣费、付款模式、权限与 Codex SSH 接入 | [zenith-account-admin.md](zenith-account-admin.md) |
 | 火山原生 MLP：第一次从开发机进入自定义任务 | [quickstart.md](quickstart.md) |

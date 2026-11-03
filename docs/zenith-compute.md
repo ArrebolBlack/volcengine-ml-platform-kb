@@ -253,16 +253,31 @@ PRO6000 的 CUDA 与 NVML UUID 曾实际不同，直接把 NVML UUID 填入 `CUD
 两个 ENV 分片的 bootstrap，下载代码后在 GPFS 执行，最终完成项目评测。这证明该次配置可运行，
 不作为新任务模板；新任务优先采用上面的共享盘脚本。具体历史大小和实验结果见原实验记录。
 
+2026-10-12 的两个内嵌代码包案例保留了原 tar 的成员、内容和 metadata，仅将传输压缩从 gzip
+改为 BZ2，后续创建成功。OpenWAM 的传输包由92651 B降至69365 B，序列化请求由131598 B
+降至100369 B；DreamVLA 的传输包由107467 B降至78713 B。两例均未取得服务端根因，
+不能据此断言存在128 KiB总请求上限，也不把历史内嵌封装恢复为当前推荐入口。
+
+排查历史载荷时比较实际序列化 body、ENV数量及每值/总字节、entrypoint字节，不能只看压缩包。
+Base64会扩大压缩结果；缩短entrypoint也不保证请求更小。改变传输封装时，本地解包须逐字节
+还原原 tar，检查成员路径不逃出目录；接收端明确指定格式，不静默尝试多种格式。
+共享部署应在新目录验证并发、重复部署和不同载荷冲突，随后原子发布，不覆盖健康任务所用代码。
+Windows的封装检查不替代Linux权限、多节点环境或真实JOB恢复/更新检查。
+
 HTTP 502 表示网关取得无效上游响应，不能直接诊断为命令过长、模型下载失败或训练崩溃。
 历史评测的成功版本同时改变了入口承载与提交路径；另一例大幅缩小请求时也改变了 Worker/GPU 拓扑，
 均未隔离旧失败的单一根因。超公开字段上限曾明确返回 `400/invalid_training_input/before_dispatch`；
 符合字段上限也不证明满足厂商未公开的总量约束。排障比较原 body、错误阶段和成功样本的所有差异。
+客户端语法/schema失败先修请求；创建阶段尚无JOB和原生日志时核对operation及底层资源，
+不能推断代码已经执行。错误明确在存储准备或挂载阶段时，核对授权和选定路径，压缩代码不能
+证明存储问题已修复；容器内出现解包/import/训练traceback后才按首个程序异常处理。
 原请求、key 和响应保留，UNKNOWN 只查原 key，不自动重 POST 或换 key；具体恢复命令见
 [快速开始](zenith-quickstart.md#4-超时恢复与结束)。创建、运行和应用验收分层确认，“卡数预留已释放”仅逻辑台账。
 
 来源：[RFC9110 502](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.6.3)、
 [历史评测提交证据](https://github.com/ArrebolBlack/se3-wam-research/blob/codex/history-eight-continue-epoch4/docs/experiments/DB0-TRAIN0/results/history_encoding_fresh_20261010/pro6000/continuation/rollout/submission-method.md)、
-[共享盘短入口实证](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/experiments/BASE1/results/openwam_pro6000_fresh_20261011.json)。
+[OpenWAM传输与共享盘短入口实证](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/experiments/BASE1/results/openwam_pro6000_fresh_20261011.json)、
+[DreamVLA历史传输记录](https://github.com/ArrebolBlack/se3-wam-research/blob/main/docs/experiments/BASE1/results/dreamvla_pro6000_training_20261011.json)。
 
 ### 按真实任务身份观察
 
