@@ -15,5 +15,5 @@ Zenith 是多云集成平台；下表原有 `volc` 文档属于火山引擎原�
 | YAML、挂载、分布式、抢占与恢复 | [custom-tasks.md](custom-tasks.md) |
 | 创建开发机、保存或构建镜像 | [images.md](images.md) |
 | 数据上传、预热、归档与恢复 | [storage.md](storage.md) |
-| 任务失败、环境差异或性能问题 | [troubleshooting.md](troubleshooting.md) |
+| 任务失败、环境差异或性能问题 | [troubleshooting.md](troubleshooting.md)；创建502与内嵌代码包见[提交载荷经验](troubleshooting.md#zenith-提交载荷与创建502) |
 | 更新知识、核验旧结论或接入项目 | [maintenance.md](maintenance.md) |
